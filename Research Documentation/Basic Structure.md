@@ -30,6 +30,54 @@ Answer + Explanation
 ```
 Instead of using a single agent, convert it into an agent loop with clear sections marking which is responsible for each. This would allow easier diagnosis and clearer explainability since Automotive Data interpretation needs to be concise.
 
+# High Level Workflow
+
+```
+[ START ]
+    ↓
+[ User asks question ]
+(e.g. "Do we collect signal X?", "Which data shows engine on/off?", "What is the sampling rate?")
+    ↓
+[ AI Assistant (Agent Brain) ]
+    ├─ Parse intent
+    ├─ Identify data type (metadata / signal / aggregate)
+    ├─ Check required permissions
+    ↓
+[ Reasoning Node (ReAct Loop) ]
+    ├─ Think: What information is needed?
+    ├─ Decide: Which tool to call?
+    ↓
+[ Tool Node ]
+    ├─ Data Catalog Tool
+    │     → signal dictionary
+    │     → metadata (units, freq, owner)
+    ├─ Documentation Search Tool
+    │     → specs, experiment notes
+    ├─ SQL / Databricks Tool (optional)
+    │     → aggregated statistics
+    ├─ Governance Check Tool
+    │     → access validation
+    ↓
+[ Observation Returned to Agent ]
+    ├─ Tool output
+    ├─ Access status
+    ↓
+[ Agent Interpretation ]
+    ├─ Validate result
+    ├─ Add context & explanation
+    ├─ Decide if another tool call is needed
+    ↓
+[ Natural Language Answer ]
+    ├─ What data exists
+    ├─ Where it comes from
+    ├─ Quality & limitations
+    ├─ How to request access
+    ↓
+[ END ]
+
+
+```
+
 # Agent Roles
 
 ## 1. Query Interpretation Agent (LLM)
