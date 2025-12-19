@@ -148,6 +148,15 @@ We could add more rules based off of our interactions with data owners and domai
       - **the sources of a signal**. 
    - This is a part of our project that makes it unique above similar projects.
 - **Diagnostic Troubleshooting Codes**
+   - This is planned to be handled through Ontology lookup and semantic mapping. 
+   - Further details on implementation has to be based on how error codes are stored/mapped in company database and how they can be accessed.
 - **Event/State signals**
-- **Geo/Telemetry**
+   - This part would be ideal for rule-based checks and fast responses.
+   - This would also reduce the resources consumed
+
+# Proposed Evaluation Metrics
+- Tool Selection Ratio (Number of times of aggregated tools selected vs raw tools selected per N selections)
+- Correct Signal Identification
+- Governance Violations (should be 0 ideally)
+- Answer Correctness (verified by domain experts)
 
