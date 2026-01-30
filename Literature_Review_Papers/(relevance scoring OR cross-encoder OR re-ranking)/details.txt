@@ -1,0 +1,6 @@
+source : IEEE 
+
+search keyword : ("relevance scoring" OR "cross-encoder" OR "re-ranking")
+
+selection:
+read : heading
