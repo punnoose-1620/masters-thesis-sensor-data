@@ -16,3 +16,29 @@ Paper URLs:
 Selection Process :
 - Title Read
 - Abstract Read
+
+
+summary: This paper proposes a RAFT, quantitative research frame work that extract structured regulatory knowledge from large language models to automatically formalize requirements and generate compliances test cases. 
+first AI understand the rules then automatically create test cases and finaly measured how good and fast it was.
+methodology : rule ---> build structure(meta model) ---> convert rule into logic ---> check if rules can be tested ---> generate test cases ---> measure accuracy and time(numbers)
+(first it teach the AI the rules properly , the ask it to generate test cases)
+to reduce AI mistakes it uses multiple LLM to reduce hallucination
+
+result:
+accuracy - RAFT -very high score almost equal to human experts
+time : takes few hours
+Reliability : much fewer wrong and random answers, almost stable result
+Generalisation : work well in different industries
+
+gap:
+1. Rules were not automatically understood in a clear and structured way.
+2, No automatic method to convert regulatory text into formal, testable requirements.
+3.AI was used without controlling or structuring its knowledge.
+4,Heavy dependence on human experts for building rule models.
+5.No method to extract and structure hidden regulatory knowledge from AI.
+6. No clear method to check whether a rule is testable before generating test cases.
+
+
+
+
+
