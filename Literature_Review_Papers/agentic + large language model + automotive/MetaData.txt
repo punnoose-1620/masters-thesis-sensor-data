@@ -1,0 +1,23 @@
+Source : Cornell University Archive
+https://arxiv.org
+
+Query String : "agentic + large language model + automotive"
+Additional Filters : 
+- Subject : Computer Science (cs)
+- Date : All Dates
+- 200 results per page
+
+Total Papers found : 12
+Selected Papers : 6
+
+Paper URLs:
+1. Cleaning Maintenance Logs with LLM Agents for Improved Predictive Maintenance : https://arxiv.org/abs/2511.05311
+2. BetterCheck: Towards Safeguarding VLMs for Automotive Perception Systems : https://arxiv.org/abs/2507.17722
+3. Querying Large Automotive Software Models: Agentic vs. Direct LLM Approaches : https://arxiv.org/abs/2506.13171
+4. GateLens: A Reasoning-Enhanced LLM Agent for Automotive Software Release Analytics : https://arxiv.org/abs/2503.21735
+5. GoNoGo: An Efficient LLM-based Multi-Agent System for Streamlining Automotive Software Release Decision-Making : https://arxiv.org/abs/2408.09785
+6. Optimizing RAG Techniques for Automotive Industry PDF Chatbots: A Case Study with Locally Deployed Ollama Models - https://arxiv.org/abs/2408.05933
+
+Selection Process :
+- Title Read
+- Abstract Read
