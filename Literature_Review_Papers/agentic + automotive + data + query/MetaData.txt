@@ -1,0 +1,18 @@
+Source : Cornell University Archive
+https://arxiv.org
+
+Query String : "agentic + automotive + data + query"
+Additional Filters : 
+- Subject : Computer Science (cs)
+- Date : All Dates
+- 200 results per page
+
+Total Papers found : 2
+Selected Papers : 1
+
+Paper URLs:
+1. Towards Automated Safety Requirements Derivation Using Agent-based RAG : https://arxiv.org/abs/2504.11243
+
+Selection Process :
+- Title Read
+- Abstract Read
