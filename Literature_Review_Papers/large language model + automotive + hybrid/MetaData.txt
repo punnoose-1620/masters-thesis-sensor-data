@@ -1,0 +1,18 @@
+Source : Cornell University Archive
+https://arxiv.org
+
+Query String : "large language model + automotive + hybrid"
+Additional Filters : 
+- Subject : Computer Science (cs)
+- Date : All Dates
+- 200 results per page
+
+Total Papers found : 1
+Selected Papers : 1
+
+Paper URLs:
+1. Explicating Tacit Regulatory Knowledge from LLMs to Auto-Formalize Requirements for Compliance Test Case Generation : https://arxiv.org/abs/2601.09762
+
+Selection Process :
+- Title Read
+- Abstract Read
