@@ -1,0 +1,20 @@
+Source : Cornell University Archive
+https://arxiv.org
+
+Query String : "large language model + automotive + framework"
+
+Additional Filters : 
+- Subject : Computer Science (cs)
+- Date : All Dates
+- 200 results per page
+
+Total Papers found : 17
+Selected Papers : 1
+
+Paper URLs:
+1. LADFA: A Framework of Using Large Language Models and Retrieval-Augmented Generation for Personal Data Flow Analysis in Privacy Policies : https://arxiv.org/abs/2601.10413
+2. Generating Automotive Code: Large Language Models for Software Development and Verification in Safety-Critical Systems : https://arxiv.org/abs/2506.04038
+
+Selection Process :
+- Title Read
+- Abstract Read
