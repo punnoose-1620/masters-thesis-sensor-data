@@ -8,7 +8,8 @@ from tqdm import tqdm
 import pdfplumber
 
 BASE_FOLDER = "Literature_Review_Papers/"
-OUTPUT_FILE = "Literature_Review_Papers_Text/papers.txt"
+OUTPUT_FILE_PUNNOOSE = "Literature_Review_Papers_Text/punnoose_papers.txt"
+OUTPUT_FILE_DEEPA = "Literature_Review_Papers_Text/deepa_papers.txt"
 
 
 def readPdf(path: str) -> str:
@@ -104,28 +105,26 @@ def parseSubFiles(baseFolder: str) -> None:
         baseFolder: Path to the root folder to scan for PDFs.
     """
     base = Path(baseFolder)
-    totalTokens = 0
+    punnooseTokens = 0
+    deepaTokens = 0
     if not base.is_dir():
         return
-
-    #paths = base.rglob("*.pdf")
-    #print(f"Total paths: {len(list(paths))}")
-    #for item in list(paths):
-    #    fileName = item.name
-    #    folderName = str(item.parent.name)
-    #    print(f"\n{fileName}\n{folderName}")
-    #    print(f"\tSign Check : {'+' in folderName}")
 
     for pdf_path in tqdm(base.rglob("*.pdf"), desc="Parsing PDFs..."):
         fileName = pdf_path.name
         folderName = str(pdf_path.parent.name)
+        content = readPdf(str(pdf_path))
+        txt_path = pdf_path.with_suffix(".txt")
         if '+' in folderName:
-            content = readPdf(str(pdf_path))
-            txt_path = pdf_path.with_suffix(".txt")
             tokenCount = count_tokens(content)
-            totalTokens += tokenCount
-            writeToTxt(OUTPUT_FILE, content, fileName)
+            punnooseTokens += tokenCount
+            writeToTxt(OUTPUT_FILE_PUNNOOSE, content, fileName)
+        else:
+            tokenCount = count_tokens(content)
+            deepaTokens += tokenCount
+            writeToTxt(OUTPUT_FILE_DEEPA, content, fileName)
 
-    print(f"Total tokens: {totalTokens}")
+    print(f"Total tokens for files by Deepa: {deepaTokens}")
+    print(f"Total tokens for files by Punnoose: {punnooseTokens}")
 
 parseSubFiles(BASE_FOLDER)

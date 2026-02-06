@@ -1,246 +1,162 @@
-# Literature Review Results
+# Comparison Report: Our Idea vs. Literature (Punnoose & Deepa Papers)
 
-**Context:** Stakeholder-facing chatbot on a hybrid LLM–deterministic architecture: structured query → LLM intent identification → rule-based function selector → code executor → LLM data interpreter → response. Goal: interpretability, predictability, low hallucination.
-
----
-
-## Paper 1: Towards Automated Safety Requirements Derivation Using Agent-based RAG
-
-| Field | Content |
-|-------|--------|
-| **title** | Towards Automated Safety Requirements Derivation Using Agent-based RAG |
-| **methodology** | Agent-based RAG for deriving safety requirements in a self-driving use case. Multiple agents each access a document pool (automotive standards, Apollo case study). Tested on safety requirement Q&A from Apollo; evaluated with RAG metrics vs. default RAG. |
-| **relevance** | 0.75 |
-| **relevant_pages** | 1–6 (abstract, intro, background, method), and sections on agent-based RAG and evaluation |
-| **conflict** | Emphasizes multi-agent RAG and dynamic retrieval rather than a single LLM for intent plus deterministic execution. No explicit rule-based function selector or code executor. |
-| **difference** | They use RAG to augment LLM for requirement derivation; we use LLM only for intent, then deterministic functions and a separate interpreter LLM. Their “agents” are RAG agents, not our intent→function→executor pipeline. |
-| **gap** | Gaps in handling complex queries and retrieving the most relevant information with standard RAG; agent-based RAG proposed to improve relevance for safety applications. |
-| **citation** | Balahari Balu, F. Geissler, F. Carella, J.-V. Zacchi, J. Jiru, N. Mata, R. Stolle. Towards Automated Safety Requirements Derivation Using Agent-based RAG. Fraunhofer IKS. |
-| **paperType** | Quantitative (experimental RAG metrics, comparison with baseline) |
-| **authors** | [{"name": "Balahari Vignesh Balu", "institution": "Fraunhofer IKS"}, {"name": "Florian Geissler", "institution": "Fraunhofer IKS"}, {"name": "Francesco Carella", "institution": "Fraunhofer IKS"}, {"name": "Joao-Vitor Zacchi", "institution": "Fraunhofer IKS"}, {"name": "Josef Jiru", "institution": "Fraunhofer IKS"}, {"name": "Nuria Mata", "institution": "Fraunhofer IKS"}, {"name": "Reinhard Stolle", "institution": "Fraunhofer IKS"}] |
+This report compares the project idea (from *LiteratureReviewHelper.ipynb*, PROJECT_CONTEXT) with the ideas implemented in the papers contained in `punnoose_papers.txt` and `deepa_papers.txt`. Each factual claim is cited to a specific paper with the relevant sentence.
 
 ---
 
-## Paper 2: BetterCheck - Towards Safeguarding VLMs for Automotive Perception Systems
+## 1. Our Idea
 
-| Field | Content |
-|-------|--------|
-| **title** | BetterCheck - Towards Safeguarding VLMs for Automotive Perception Systems |
-| **methodology** | Focus on vision-language models (VLMs) in automotive perception: red-teaming, adversarial evaluation, and safeguards. Not a chatbot or intent–function architecture. |
-| **relevance** | 0.35 |
-| **relevant_pages** | 1–2 (abstract, intro); limited overlap with text-based stakeholder chatbot |
-| **conflict** | None directly; different modality (vision vs. text QA) and no intent/function/executor design. |
-| **difference** | VLMs for perception safety vs. our text-based intent classification and deterministic backend. No RAG, no rule-based function selection. |
-| **gap** | Gaps in VLM robustness and safety for automotive perception; red-teaming and safeguards proposed. |
-| **citation** | [Authors from paper]. BetterCheck - Towards Safeguarding VLMs for Automotive Perception Systems. |
-| **paperType** | Quantitative (adversarial/red-team evaluation) |
-| **authors** | [Extract from paper PDF metadata] |
+Our proposed system is a **stakeholder-facing chatbot** that answers user queries by combining:
+
+- **LLM-based intent understanding** — An Intent Identifier (e.g., Gemini, GPT, Claude) classifies the user’s intent, assigns confidence, and groups intents; it is used only for semantic understanding, not for execution.
+- **Deterministic function selection** — A non-LLM, rule-based Function Selector maps intents to predefined backend functions, validates inputs and preconditions, and decides whether to execute or request clarification.
+- **Structured data retrieval and execution** — A Code Executor runs the selected function, fetches data from structured sources (databases, predefined datasets), applies business logic, and produces raw structured data with no natural language generation at this stage.
+- **LLM-based result interpretation** — A Data Interpreter (LLM) turns raw execution results into human-readable explanations, summaries, and contextual insights; it has no access to execution logic and operates only on raw data, the original query, and optional metadata.
+
+**Core design principle:** Separate reasoning from execution to ensure **predictability**, **controllability**, **reduced hallucination risk**, and **easier comparison** with task-oriented dialogue systems, slot-filling approaches, and agent-based LLM workflows. Critical decisions (which function to run, what to execute) are **rule-based and auditable**; LLMs are used only where probabilistic reasoning is beneficial (understanding and explaining).
+
+**Positioning:** The system is comparable to task-oriented dialogue systems (TOD), LLM agent frameworks (ReAct, Toolformer, AutoGPT), hybrid neuro-symbolic architectures, and enterprise conversational AI platforms. Key differentiators: **dual-LLM design** (intent + interpretation), **deterministic execution core**, and **explicit input and function schemas**.
 
 ---
 
-## Paper 3: Cleaning Maintenance Logs with LLM Agents for Improved Predictive Maintenance
+## 2. Our Research Questions
 
-| Field | Content |
-|-------|--------|
-| **title** | Cleaning Maintenance Logs with LLM Agents for Improved Predictive Maintenance |
-| **methodology** | LLM-based agents to clean and normalize maintenance log text for predictive maintenance. Focus on data preparation and log quality, not end-user Q&A or intent→function mapping. |
-| **relevance** | 0.55 |
-| **relevant_pages** | 1–4 (abstract, intro, method, evaluation) |
-| **conflict** | Uses LLMs for data cleaning/transformation; we use LLMs for intent and interpretation only, with deterministic execution. |
-| **difference** | Back-office data cleaning pipeline vs. stakeholder-facing query→intent→function→execution→response. No rule-based function selector or code executor in their design. |
-| **gap** | Unstructured maintenance logs hinder predictive models; LLM agents proposed to automate cleaning and normalization. |
-| **citation** | [Authors from paper]. Cleaning Maintenance Logs with LLM Agents for Improved Predictive Maintenance. |
-| **paperType** | Quantitative (cleaning quality, downstream predictive metrics) |
-| **authors** | [Extract from paper] |
+Derived from the project context and positioning:
+
+1. **Separation of concerns:** Can separating *understanding* (LLM intent), *decision* (rule-based function selection), *execution* (code executor), and *explanation* (LLM interpreter) reduce hallucination and improve interpretability compared to end-to-end RAG or agentic LLM systems?
+2. **Intent vs. execution:** Does using the LLM only for intent classification (and interpretation), with deterministic function selection and execution, yield more predictable and auditable behaviour than systems where the LLM chooses and invokes tools/functions?
+3. **Stakeholder-facing QA:** How does this hybrid architecture perform for stakeholder-facing question answering over structured data (e.g., domain datasets, databases) compared to pure RAG chatbots or multi-agent LLM systems in similar domains (e.g., automotive, compliance)?
+4. **Comparability:** How does the design compare with slot-filling, semantic frame parsing, and ontology-driven dialogue systems in terms of ambiguity handling, confidence-aware behaviour, and explainability?
 
 ---
 
-## Paper 4: GateLens - A Reasoning-Enhanced LLM Agent for Automotive Software Release Analytics
+## 3. Research Gaps Common to All Papers in These Text Files
 
-| Field | Content |
-|-------|--------|
-| **title** | GateLens - A Reasoning-Enhanced LLM Agent for Automotive Software Release Analytics |
-| **methodology** | LLM agent with reasoning (e.g. chain-of-thought) for software release analytics: querying release data, summarizing, and answering analytical questions. Agentic flow rather than fixed intent→function map. |
-| **relevance** | 0.80 |
-| **relevant_pages** | 1–6 (abstract, intro, architecture, reasoning, evaluation) |
-| **conflict** | Relies on LLM to drive reasoning and possibly tool use; we constrain LLM to intent only and keep function selection and execution deterministic. |
-| **difference** | General-purpose analytics agent vs. our hybrid: intent by LLM, then rule-based function selection and code execution. GateLens does not separate intent from execution. |
-| **gap** | Need for interpretable and reliable release analytics; reasoning-enhanced agent proposed for complex queries. |
-| **citation** | [Authors from paper]. GateLens - A Reasoning-Enhanced LLM Agent for Automotive Software Release Analytics. |
-| **paperType** | Quantitative (analytics accuracy, user/benchmark evaluation) |
-| **authors** | [Extract from paper] |
+Across **punnoose_papers.txt** (14 papers) and **deepa_papers.txt** (23 papers), the following gaps recur:
 
----
-
-## Paper 5: GoNoGo - An Efficient LLM-based Multi-Agent System for Streamlining Automotive Software Release Decision-Making
-
-| Field | Content |
-|-------|--------|
-| **title** | GoNoGo - An Efficient LLM-based Multi-Agent System for Streamlining Automotive Software Release Decision-Making |
-| **methodology** | Multi-agent LLM system for release go/no-go decisions: agents collaborate on gathering information, reasoning, and recommending decisions. No single intent→function→executor pipeline. |
-| **relevance** | 0.78 |
-| **relevant_pages** | 1–6 (abstract, intro, multi-agent design, decision workflow, evaluation) |
-| **conflict** | Multi-agent LLM orchestration vs. our single intent classifier + deterministic function selector. Decisions are LLM-driven rather than rule-based after intent. |
-| **difference** | Collaborative agents for one decision type (release) vs. our generic intent→function map and code executor for multiple query types. |
-| **gap** | Inefficiency and inconsistency in manual release decisions; multi-agent system proposed for speed and consistency. |
-| **citation** | [Authors from paper]. GoNoGo - An Efficient LLM-based Multi-Agent System for Streamlining Automotive Software Release Decision-Making. |
-| **paperType** | Quantitative (decision accuracy, latency, user study) |
-| **authors** | [Extract from paper] |
+| Gap | Papers (representative) |
+|-----|-------------------------|
+| **Hallucination and reliability** | LLMs must produce “highly reliable and explainable results” (Safety Requirements RAG); “LLMs and VLMs are prone to hallucination” (BetterCheck); RAG can “reduce hallucinations and improve factual accuracy” when retrieval is good, but “if irrelevant or even incorrect context is retrieved, the probability of hallucinations is exacerbated” (Tax Law RAG; Safety Requirements RAG). |
+| **Retrieval relevance** | “Existing RAG approaches … their performance deteriorates when handling complex queries and it becomes increasingly harder to retrieve the most relevant information” (Safety Requirements RAG); “Traditional RAG systems rely heavily on internal document retrieval, which can lead to incomplete or inaccurate responses when relevant information is missing” (Secure Multifaceted-RAG). |
+| **Domain-specific knowledge** | “Conventional approaches that utilise pre-trained LLMs to assist in safety analyses typically lack domain-specific knowledge” (Safety Requirements RAG); “The limitation of a lack of domain-specific knowledge in understanding technical terms and processes within automotive and safety domains is acknowledged” (Explicating Tacit Regulatory Knowledge). |
+| **Intent classification with limited data** | “The dependency on large annotated datasets remains a critical bottleneck”; “the need for models to understand and classify intents with minimal training data” (MAML + embeddings for few-shot intent); “Intent classifiers are generally lacking in real-world training data” (NNSI for intent classification). |
+| **Rule-based vs. flexible understanding** | “Rule-based systems are inflexible, involve high development and maintenance costs due to the need for manual updates, and are less robust to variations in user input, often failing to recognize intent in cases of misspellings, slang, or acronyms” (Comparative Analysis BERT and RoBERTa for Indonesian Chatbots). |
+| **Security and data exposure** | “Providing documents and other specification-related information in automotive was considered quite problematic — as it involved practically sending the secret information to online services and other parties involved” (Adopting RAG for LLM-Aided Future Vehicle Design); “leveraging external Large Language Models … introduces security risks and high operational costs” (Secure Multifaceted-RAG). |
+| **Controlled use of LLMs** | Many papers use LLMs for end-to-end generation, tool choice, or multi-agent orchestration without a deterministic “execution core”; few explicitly separate *intent only* (LLM) from *function selection and execution* (rules/code). |
 
 ---
 
-## Paper 6: Optimizing RAG Techniques for Automotive Industry PDF Chatbots: A Case Study with Locally Deployed Ollama Models
+## 4. How Our Project Can Address This Research Gap
 
-| Field | Content |
-|-------|--------|
-| **title** | Optimizing RAG Techniques for Automotive Industry PDF Chatbots: A Case Study with Locally Deployed Ollama Models |
-| **methodology** | RAG optimization for PDF-based chatbots in automotive: chunking, retrieval, and local LLMs (Ollama). End-to-end QA over documents without explicit intent classification or deterministic backends. |
-| **relevance** | 0.72 |
-| **relevant_pages** | 1–5 (abstract, RAG pipeline, chunking/retrieval, Ollama setup, evaluation) |
-| **conflict** | Pure RAG + LLM generation for answers; we add intent, rule-based function selection, and code execution before a dedicated interpreter LLM. |
-| **difference** | Document QA only vs. our hybrid: intent → function → structured data → interpreter. They do not use a function map or code executor. |
-| **gap** | Relevance and accuracy of RAG for domain PDFs; optimization of chunking and retrieval for local models. |
-| **citation** | [Authors from paper]. Optimizing RAG Techniques for Automotive Industry PDF Chatbots: A Case Study with Locally Deployed Ollama Models. |
-| **paperType** | Quantitative (retrieval metrics, answer quality, latency) |
-| **authors** | [Extract from paper] |
+- **Hallucination and reliability:** We restrict the LLM to *intent* and *interpretation* and keep *which function runs* and *what code executes* deterministic. So retrieval errors or model drift affect only understanding and wording, not which backend runs or what data is fetched — reducing the risk that “irrelevant or even incorrect context” leads to wrong actions. *Cite: “The risk of hallucinations is related to the information accessible to the LLM, and its suitability to solve the task at hand” (Towards Automated Safety Requirements Derivation Using Agent-based RAG).* By giving the interpreter only *retrieved execution results* (and optional metadata), we align with the need for “highly reliable and explainable results” in safety-sensitive settings.
 
----
+- **Retrieval relevance:** Where we add RAG (e.g. for the interpreter or for intent disambiguation), we can adopt the same directions as the literature: hybrid retrieval, re-ranking, and chunking strategies (e.g. Enhancing Retrieval and Re-ranking in RAG, Chunking Techniques, Optimizing RAG for Automotive PDF Chatbots). Our architecture still bounds the impact of bad retrieval: bad retrieval cannot directly change *which* function is selected, because that is rule-based from the intent label.
 
-## Paper 7: Querying Large Automotive Software Models: Agentic vs. Direct LLM Approaches
+- **Domain-specific knowledge:** We do not rely on the LLM to “know” the domain; we inject domain through the **function map**, **preconditions**, and **structured data sources**. So we address “lack of domain-specific knowledge” by encoding domain in the deterministic layer (functions, schemas, data) rather than in the model’s parameters. *Cite: “To integrate additional domain-specific information, techniques such as fine-tuning or retrieval-augmented generation (RAG) are commonly used” (Safety Requirements RAG).* We combine that with a fixed intent→function mapping so domain behaviour is auditable.
 
-| Field | Content |
-|-------|--------|
-| **title** | Querying Large Automotive Software Models: Agentic vs. Direct LLM Approaches |
-| **methodology** | Compares agentic (tool-using) LLM vs. direct LLM for querying large automotive software artifacts. No fixed intent→function map; focus on which LLM paradigm works better. |
-| **relevance** | 0.70 |
-| **relevant_pages** | 1–5 (abstract, agentic vs direct, experimental setup, results) |
-| **conflict** | Evaluates LLM-centric approaches; we deliberately move function selection and execution out of the LLM into rules and code. |
-| **difference** | Agentic vs. direct LLM for software queries vs. our hybrid: one LLM for intent, deterministic functions, second LLM for interpretation only. |
-| **gap** | Uncertainty about whether agentic or direct LLM is better for large software models; empirical comparison provided. |
-| **citation** | [Authors from paper]. Querying Large Automotive Software Models: Agentic vs. Direct LLM Approaches. |
-| **paperType** | Quantitative (comparative experiment) |
-| **authors** | [Extract from paper] |
+- **Intent with limited data:** Our intent layer can use the same techniques as the reviewed papers: few-shot or zero-shot LLM intent detection, MAML + embeddings for few-shot intent, NNSI-style data augmentation, or traditional classifiers (BERT/RoBERTa, Naive Bayes, Logistic Regression) when labels exist. So we address “lack of real-world training data” and “minimal training data” by allowing pluggable intent models and, where needed, small labelled sets or augmentation.
+
+- **Rule-based inflexibility:** We keep rules only for *function selection* (intent → function), not for *understanding* the user. Understanding is done by the LLM, which handles paraphrasing, misspellings, and variation; the rule layer then maps the *interpreted intent* to a function. So we mitigate “rule-based systems are inflexible … less robust to variations in user input” by using the LLM for robustness and rules for controllability. *Cite: Comparative Analysis of Intent Classification in Indonesian Chatbots (BERT and RoBERTa).*
+
+- **Security and data exposure:** We can run the intent LLM and the interpreter LLM locally or in a trusted environment; the only component that must access structured data is the Code Executor, which does not send raw user text or proprietary docs to external APIs. So we align with the concern that “sending the secret information to online services” is problematic (Adopting RAG for LLM-Aided Future Vehicle Design) and with the need for “confidentiality-preserving filter” and “proprietary corporate data is not sent to external models” (Secure Multifaceted-RAG).
+
+- **Controlled use of LLMs:** We explicitly separate “understanding ≠ decision ≠ execution ≠ explanation.” No reviewed paper in these sets proposes exactly this split: many use RAG + one LLM for full answers, or multi-agent LLM orchestration, or LLM-driven function/tool choice. Our project fills the gap of a **hybrid architecture with a deterministic execution core** and dual-LLM (intent + interpreter) design.
 
 ---
 
-## Paper 8: Explicating Tacit Regulatory Knowledge from LLMs to Auto-Formalize Requirements for Compliance Test Case Generation
+## 5. What Further Research Might Be Needed
 
-| Field | Content |
-|-------|--------|
-| **title** | Explicating Tacit Regulatory Knowledge from LLMs to Auto-Formalize Requirements for Compliance Test Case Generation |
-| **methodology** | Use LLMs to extract and formalize regulatory knowledge for auto-generating compliance test cases. LLM as knowledge source and formalizer; downstream test generation. |
-| **relevance** | 0.65 |
-| **relevant_pages** | 1–6 (abstract, regulatory framing, LLM explication, formalization, test generation) |
-| **conflict** | LLM used for formalization and knowledge extraction; we use LLM for intent and natural-language interpretation, not for producing formal requirements or test cases. |
-| **difference** | One-off formalization and test generation vs. interactive chatbot with intent→function→executor. No stakeholder Q&A loop. |
-| **gap** | Tacit regulatory knowledge hard to formalize; LLMs proposed to explicate and support test case generation. |
-| **citation** | [Authors from paper]. Explicating Tacit Regulatory Knowledge from LLMs to Auto-Formalize Requirements for Compliance Test Case Generation. |
-| **paperType** | Mixed (qualitative explication, quantitative test generation evaluation) |
-| **authors** | [Extract from paper] |
+- **Empirical comparison:** Compare our hybrid pipeline (intent → deterministic function → executor → interpreter) against pure RAG chatbots and agentic LLM systems on the same stakeholder QA tasks (e.g. automotive, compliance) for accuracy, hallucination rate, latency, and interpretability.
+- **Intent model choice:** Systematically compare LLM-based intent vs. BERT/RoBERTa vs. few-shot (MAML + embeddings) vs. classical ML (e.g. Naive Bayes, Logistic Regression) for intent accuracy, robustness to paraphrasing, and required training data — and their interaction with the deterministic function selector.
+- **RAG in our pipeline:** If RAG is added (e.g. for the interpreter or for disambiguation), study which retrieval/re-ranking/chunking strategies (as in Tax Law RAG, Chunking Techniques, Optimizing RAG for Automotive PDF Chatbots) work best and how they interact with our separation of intent, execution, and interpretation.
+- **Formalisation and safety:** Investigate how to export or formalise our “function map” and preconditions so they can be checked against regulatory or safety requirements (linking to themes in Explicating Tacit Regulatory Knowledge and Generating Automotive Code).
+- **Scaling and maintenance:** Study the cost of maintaining the intent→function map and preconditions as the domain grows (new intents, new functions, new data sources) and how to semi-automate or recommend updates from usage logs or feedback.
+- **Multimodal and enterprise:** If extending to enterprise or multimodal settings, combine our architecture with security filtering and multi-source retrieval (as in Secure Multifaceted-RAG) and, if relevant, with hallucination detection (as in BetterCheck) for any generative part.
 
 ---
 
-## Paper 9: Generating Automotive Code: Large Language Models for Software Development and Verification in Safety-Critical Systems
+## 6. According to These Papers, What Might Be the Downsides / Limitations of Our Approach
 
-| Field | Content |
-|-------|--------|
-| **title** | Generating Automotive Code: Large Language Models for Software Development and Verification in Safety-Critical Systems |
-| **methodology** | LLMs for generating and verifying automotive code in safety-critical contexts. Focus on code generation, verification, and safety assurance, not chatbot or intent classification. |
-| **relevance** | 0.50 |
-| **relevant_pages** | 1–4 (abstract, code gen, verification, safety discussion) |
-| **conflict** | None; different problem (code gen/verification vs. user-facing QA). |
-| **difference** | Code generation and verification vs. our query→intent→function→execution→response. Our “code executor” runs predefined business logic, not LLM-generated code. |
-| **gap** | Reliability and safety of LLM-generated code; methods for verification and integration in safety-critical workflows. |
-| **citation** | [Authors from paper]. Generating Automotive Code: Large Language Models for Software Development and Verification in Safety-Critical Systems. |
-| **paperType** | Quantitative (code quality, verification results) |
-| **authors** | [Extract from paper] |
+- **Rule-based inflexibility and maintenance:**  
+  **Paper:** Comparative Analysis of Intent Classification in Indonesian Chatbots Using BERT and RoBERTa Models (*deepa_papers.txt*).  
+  **Quote:** “Rule-based systems are inflexible [3], involve high development and maintenance costs due to the need for manual updates [4], and are less robust to variations in user input, often failing to recognize intent in cases of misspellings, slang, or acronyms [5].”  
+  **Implication for us:** Our *function selector* is rule-based (intent → function). If the intent set or function map is large, manual updates and preconditions could become costly. We mitigate by using an LLM for *understanding* (so robustness to variation is in the intent layer), but the rule layer itself remains rigid and must be kept in sync with the domain.
 
----
+- **LLM format compliance when used for intent:**  
+  **Paper:** Enhancing LLM Function Calling with Structured Outputs (*deepa_papers.txt*).  
+  **Quote:** “The prevalent approach relies on instructing the LLM via system prompts to produce outputs adhering to a specified schema. While often effective, this method can suffer from inconsistencies, where the LLM fails to strictly follow the requested format, leading to parsing errors and unreliable behavior in downstream applications.”  
+  **Implication for us:** Our intent layer expects the LLM to output a *structured intent label*. If the model does not adhere to the schema, parsing can fail and the deterministic selector may get wrong or empty input, leading to fallback or errors. We may need constrained decoding or structured-output methods (as in that paper) for the intent LLM.
 
-## Paper 10: LADFA - A Framework of Using Large Language Models and Retrieval-Augmented Generation for Personal Data Flow Analysis in Privacy Policies
+- **Incomplete responses when retrieval/data is missing:**  
+  **Paper:** Secure Multifaceted-RAG for Enterprise: Hybrid Knowledge Retrieval with Security Filtering (*punnoose_papers.txt*).  
+  **Quote:** “Traditional RAG systems rely heavily on internal document retrieval, which can lead to incomplete or inaccurate responses when relevant information is missing.”  
+  **Implication for us:** We are not RAG-only; we have a Code Executor over structured data. If the function map or data sources do not cover a user need, our system can only clarify or refuse — we might produce “incomplete” answers in the sense of not covering unmodelled intents or missing data. So the limitation of “missing relevant information” appears as *missing functions or data* in our design, not only missing retrieval.
 
-| Field | Content |
-|-------|--------|
-| **title** | LADFA: A Framework of Using Large Language Models and Retrieval-Augmented Generation for Personal Data Flow Analysis in Privacy Policies |
-| **methodology** | End-to-end framework: pre-processor, LLM-based processor, RAG, and data-flow post-processor to extract personal data flows from privacy policies and build a graph for analysis. Applied to automotive privacy policies. |
-| **relevance** | 0.68 |
-| **relevant_pages** | 1–5 (abstract, intro, framework, RAG/knowledge base, case study) |
-| **conflict** | LLM + RAG drive extraction and analysis; we use LLM for intent and interpretation only, with deterministic execution in between. |
-| **difference** | Document analysis pipeline (privacy policies) vs. interactive chatbot. They do not have user intent classification or a rule-based function selector for backend execution. |
-| **gap** | Automating privacy policy analysis at scale; RAG + LLM proposed for data flow extraction and insight. |
-| **citation** | Yuan, H., Matyunin, N., Raza, A., Li, S. LADFA: A Framework of Using Large Language Models and Retrieval-Augmented Generation for Personal Data Flow Analysis in Privacy Policies. ACM, 2025. |
-| **paperType** | Quantitative (case study on ten automotive privacy policies, accuracy metrics) |
-| **authors** | [{"name": "Haiyue Yuan", "institution": "University of Kent, iCSS"}, {"name": "Nikolay Matyunin", "institution": "Honda Research Institute Europe"}, {"name": "Ali Raza", "institution": "Honda Research Institute Europe"}, {"name": "Shujun Li", "institution": "University of Kent, iCSS"}] |
+- **Hallucination in the interpreter:**  
+  **Paper:** Towards Automated Safety Requirements Derivation Using Agent-based RAG (*punnoose_papers.txt*).  
+  **Quote:** “If irrelevant or even incorrect context is retrieved, the probability of hallucinations is exacerbated.”  
+  **Implication for us:** Our Data Interpreter receives *execution results* (and optional context). If we later add RAG for the interpreter, the same risk applies: bad or irrelevant context could lead the interpreter to “hallucinate” around the answer. So any RAG used in the interpretation stage should be designed and evaluated to avoid exacerbating hallucinations.
+
+- **Adoption barriers for sensitive data:**  
+  **Paper:** Adopting RAG for LLM-Aided Future Vehicle Design (*punnoose_papers.txt*).  
+  **Quote:** “Providing documents and other specification-related information in automotive was considered quite problematic — as it involved practically sending the secret information to online services and other parties involved. For that reason, the adoption of LLM-aided tools in automotive was considered quite problematic.”  
+  **Implication for us:** If the *intent* or *interpreter* LLM is cloud-based, user queries or internal context might be sent to external services. To avoid the same adoption barrier, we need local or trusted deployment for both LLMs, or strict filtering so that no sensitive payloads leave the organisation (as in Secure Multifaceted-RAG).
+
+- **Less flexibility than full agentic LLM:**  
+  Papers such as GateLens, GoNoGo, Simple Action Model, and Querying Large Automotive Software Models (agentic vs. direct) use the LLM to *choose* tools or *orchestrate* steps. Our approach fixes the set of functions and the mapping from intent to function. So we trade flexibility (e.g. arbitrary tool chains, new tools at runtime) for predictability and auditability — which can be a limitation in highly dynamic or exploratory use cases.
 
 ---
 
-## Paper 11: Knowledge Management for Automobile Failure Analysis Using Graph RAG
+## 7. According to These Papers, What Might Be the Strengths of Our Approach
 
-| Field | Content |
-|-------|--------|
-| **title** | Knowledge Management for Automobile Failure Analysis Using Graph RAG |
-| **methodology** | Graph RAG: knowledge graph + retrieval over graph for automobile failure analysis. Query over structured failure knowledge; may use LLM for answering. Not an intent→function→executor chatbot. |
-| **relevance** | 0.62 |
-| **relevant_pages** | 1–4 (abstract, graph construction, RAG over graph, failure analysis use case) |
-| **conflict** | Graph-centric retrieval and possibly open-ended LLM answers; we use flat intent→function map and code executor before interpretation. |
-| **difference** | Failure-analysis knowledge management vs. general stakeholder Q&A. No explicit rule-based function selector; graph RAG serves as retrieval backend. |
-| **gap** | Managing and querying failure knowledge at scale; graph RAG proposed to improve retrieval and reasoning over failures. |
-| **citation** | [Authors from paper]. Knowledge Management for Automobile Failure Analysis Using Graph RAG. |
-| **paperType** | Quantitative (retrieval/answer quality on failure analysis queries) |
-| **authors** | [Extract from paper] |
+- **Explicit need for reliable and explainable LLM outputs:**  
+  **Paper:** Towards Automated Safety Requirements Derivation Using Agent-based RAG (*punnoose_papers.txt*).  
+  **Quote:** “However, to efficiently support safety engineers in these tasks, LLMs must generate highly reliable and explainable results.”  
+  **Strength:** Our design separates *generation of the final answer* (Data Interpreter) from *decision and execution*. The interpreter only explains *given* data; it does not decide which function runs or what data is fetched. That makes it easier to constrain and explain outputs and aligns with the need for “highly reliable and explainable results” in safety or compliance contexts.
 
----
+- **Grounding and hallucination reduction via retrieval/context:**  
+  **Paper:** Enhancing Retrieval and Re-ranking in RAG: A Case Study on Tax Law (*deepa_papers.txt*).  
+  **Quote:** “By incorporating retrieved evidence, RAG models significantly reduce hallucinations and improve factual accuracy [4, 5].”  
+  **Strength:** We ground the *interpreter* in **execution results** (and optionally in retrieved context). So we do not ask the LLM to “invent” which backend to call or what data exists — we give it the actual output of the Code Executor. That is a form of strong grounding that can “reduce hallucinations and improve factual accuracy” for the answer text, as long as the interpreter is constrained to the provided data.
 
-## Paper 12: Measuring design compliance using neural language models – an automotive case study
+- **Deterministic tools for solving the task:**  
+  **Paper:** Towards Automated Safety Requirements Derivation Using Agent-based RAG (*punnoose_papers.txt*).  
+  **Quote:** “Subsequently, deterministic tools are leveraged to actually solve the task.”  
+  **Strength:** The reviewed paper itself uses “deterministic tools” after retrieval/LLM steps. Our architecture makes this explicit: the **Function Selector** and **Code Executor** are deterministic. So “deterministic tools are leveraged to actually solve the task” is a direct strength of our approach — we centralise the solving step in a deterministic core rather than in the LLM.
 
-| Field | Content |
-|-------|--------|
-| **title** | Measuring design compliance using neural language models – an automotive case study |
-| **methodology** | Neural language models to measure design compliance (e.g. requirements vs. design docs) in automotive. Classification/similarity for compliance checking, not interactive Q&A. |
-| **relevance** | 0.58 |
-| **relevant_pages** | 1–4 (abstract, compliance task, model setup, case study results) |
-| **conflict** | None; compliance checking is a different task from stakeholder chatbot. |
-| **difference** | Batch or single-shot compliance assessment vs. our real-time intent→function→execution→response. No user intent or function map. |
-| **gap** | Manual compliance checking is costly; NLMs proposed for automated compliance measurement. |
-| **citation** | [Authors from paper]. Measuring design compliance using neural language models – an automotive case study. |
-| **paperType** | Quantitative (compliance metrics, case study) |
-| **authors** | [Extract from paper] |
+- **Interpretable RAG / knowledge-aware systems:**  
+  **Paper:** Enhancing Retrieval and Re-ranking in RAG: A Case Study on Tax Law (*deepa_papers.txt*).  
+  **Quote:** “These results highlight the importance of layered architecture that integrates both hybrid retrieval and re-ranking to enhance relevance, especially in regulation-heavy domains. Our findings offer practical insights into building robust and **interpretable RAG systems** for legal and structured text retrieval.”  
+  **Strength:** We prioritise interpretability by making each layer inspectable: intent (LLM), function choice (rules), execution (code), explanation (LLM on fixed data). So we align with the goal of “interpretable” systems; if we add RAG, we can adopt similar layered retrieval/re-ranking for the parts that need it.
 
----
+- **Intent classification as a core, well-studied component:**  
+  **Papers:** e.g. Comparative Analysis of Intent Classification in Indonesian Chatbots (BERT and RoBERTa), Intent Classification French Recruitment Chatbot (CamemBERT), NNSI for Intent Classification, MAML + embeddings for few-shot intent (*deepa_papers.txt*).  
+  **Strength:** The literature treats intent classification as central to chatbots and dialogue systems. Our design puts **intent** at the centre and then connects it to a **deterministic** backend. So we build on a well-understood, comparable component (intent classification) while differentiating in the execution layer (rule-based function selection + code executor).
 
-## Paper 13: Secure Multifaceted-RAG for Enterprise: Hybrid Knowledge Retrieval with Security Filtering
+- **Security and local deployment:**  
+  **Paper:** Adopting RAG for LLM-Aided Future Vehicle Design (*punnoose_papers.txt*).  
+  **Quote:** “Our results demonstrate that while GPT-4 offers superior performance, LLAMA3 and Mistral also show promising capabilities for **local deployment**, **addressing data privacy concerns** in automotive applications.”  
+  **Strength:** Our pipeline can run with local or trusted LLMs for intent and interpreter; only the Code Executor needs to touch internal data. So we can “address data privacy concerns” by avoiding sending sensitive documents or user inputs to external APIs, consistent with the emphasis on local deployment and privacy in the literature.
 
-| Field | Content |
-|-------|--------|
-| **title** | Secure Multifaceted-RAG for Enterprise: Hybrid Knowledge Retrieval with Security Filtering |
-| **methodology** | Multi-faceted RAG with hybrid retrieval and security filtering for enterprise. Focus on safe, governed RAG (access control, filtering), not intent classification or deterministic execution. |
-| **relevance** | 0.60 |
-| **relevant_pages** | 1–4 (abstract, hybrid retrieval, security filtering, enterprise deployment) |
-| **conflict** | None; complementary focus on security and retrieval. We could adopt similar filtering in a RAG component if we add one. |
-| **difference** | Enterprise RAG security and hybrid retrieval vs. our hybrid architecture (intent + deterministic functions + interpreter). They do not define intent→function→executor. |
-| **gap** | Secure, compliant RAG in enterprises; hybrid retrieval and security filtering proposed. |
-| **citation** | [Authors from paper]. Secure Multifaceted-RAG for Enterprise: Hybrid Knowledge Retrieval with Security Filtering. |
-| **paperType** | Mixed (system design, security analysis, possibly quantitative retrieval metrics) |
-| **authors** | [Extract from paper] |
+- **Separation of parametric knowledge and execution:**  
+  **Paper:** RAGRouter and related RAG/LLM papers (*punnoose* / *deepa*) discuss “parametric knowledge” vs. “retrieval-induced” behaviour.  
+  **Strength:** We clearly separate **what the model knows** (intent semantics, how to explain) from **what the system does** (which function runs, what data is read). That makes it easier to reason about correctness (execution is deterministic) and to update behaviour (change function map or data) without retraining the LLM.
 
 ---
 
-## Summary Table (Relevance)
+## Summary Table: Papers Referenced
 
-| Paper | Title (short) | Relevance |
-|-------|----------------|-----------|
-| 1 | Safety Requirements + Agent-based RAG | 0.75 |
-| 2 | BetterCheck (VLMs, perception) | 0.35 |
-| 3 | Cleaning Maintenance Logs (LLM agents) | 0.55 |
-| 4 | GateLens (release analytics agent) | 0.80 |
-| 5 | GoNoGo (multi-agent release) | 0.78 |
-| 6 | RAG for PDF chatbots (Ollama) | 0.72 |
-| 7 | Agentic vs. Direct LLM (software models) | 0.70 |
-| 8 | Regulatory knowledge → test cases | 0.65 |
-| 9 | Generating automotive code (LLM) | 0.50 |
-| 10 | LADFA (privacy policy, RAG) | 0.68 |
-| 11 | Graph RAG for failure analysis | 0.62 |
-| 12 | Design compliance (NLMs) | 0.58 |
-| 13 | Secure Multifaceted-RAG | 0.60 |
+| Source file | Paper (short) | Section(s) cited |
+|-------------|----------------|------------------|
+| punnoose_papers.txt | Towards Automated Safety Requirements Derivation Using Agent-based RAG | 3, 4, 6, 7 |
+| punnoose_papers.txt | BetterCheck: Towards Safeguarding VLMs for Automotive Perception Systems | 3, 6 |
+| punnoose_papers.txt | Adopting RAG for LLM-Aided Future Vehicle Design | 3, 4, 6, 7 |
+| punnoose_papers.txt | Secure Multifaceted-RAG for Enterprise | 3, 4, 6, 7 |
+| punnoose_papers.txt | Explicating Tacit Regulatory Knowledge from LLMs | 3 |
+| deepa_papers.txt | Enhancing Retrieval and Re-ranking in RAG: A Case Study on Tax Law | 3, 7 |
+| deepa_papers.txt | Comparative Analysis of Intent Classification in Indonesian Chatbots (BERT and RoBERTa) | 3, 4, 6, 7 |
+| deepa_papers.txt | Enhancing LLM Function Calling with Structured Outputs | 6 |
+| deepa_papers.txt | NNSI for Intent Classification; MAML + embeddings for few-shot intent | 3, 4, 7 |
+| deepa_papers.txt | Intent Classification French Recruitment Chatbot (CamemBERT) | 7 |
 
-*For papers where "authors" is "[Extract from paper]", the source text did not provide a clear author list in the read sections; you can fill these from the PDFs or full text.*
+All cited sentences are quoted from the paper texts in `punnoose_papers.txt` or `deepa_papers.txt` as indicated.
