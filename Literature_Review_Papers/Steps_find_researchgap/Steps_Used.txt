@@ -1,0 +1,38 @@
+How to find Research gap:
+
+Core idea : Find what problem does the paper studying and what does this ignore
+
+1.  Identify paper claims _____ and solves _______   ( Introduction + abstract )
+
+Gap Questions :
+
+1. What assumption does the paper make?
+
+2. What does the LLM control?
+
+3. What is not evaluated?
+
+4. Who is the system not safe for? stakeholder safe to use?
+
+5.What would break this system?
+
+
+Check the gap thesis worthy :
+
+A good gap must
+
+the system design something better?
+can i evaluate it differently?
+can i constrain the system more safely
+
+
+must check:
+
+Paper Goal :
+Core method :
+What LLM controls:
+What is deterministic :
+Missing Evaluation:
+Asssumptions:
+Where it fails in real world :
+Potential Research gap :
