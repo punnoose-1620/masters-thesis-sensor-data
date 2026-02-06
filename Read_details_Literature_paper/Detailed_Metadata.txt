@@ -1,0 +1,39 @@
+paper : Enhancing Retrieval and Re-ranking in RAG: A Case Study on Tax Law
+
+The paper shows that combining different search methods and re‑ranking results helps AI systems find and rank legal documents more accurately.
+
+Paper Goal : To improve how a RAG system finds and orders legal documents so that AI answers are based on the most relevant tax law articles. The paper checks the retrival quality.
+
+Core method :A layered RAG retrieval pipeline
+sparse(keyword based ) - BM25 , SPLADE
+Dense (meaning based ) - Dense embedding model - BGE-m3, OpenAI text- embedding -3 -large , all-MiniLM-L6-v2
+After testing all models , the paper chose the best performers  :Final Hybrid Choic -> BM25 + BGE‑m3
+
+What LLM controls: convert retrival legal documents into a natural language answer
+
+What is deterministic : keyword search - > hybrid score calculation -> retrival metrics -> Re-ranking
+
+Results  :The paper reports quantitative (numerical) results 
+The paper reports retrieval metrics such as Recall, Precision, NDCG, MRR, and MAP, showing that hybrid retrieval improves recall to 0.60 and re‑ranking improves NDCG to 0.44
+
+Missing Evaluation: 
+Final answer correctness
+Hallucinations
+Bias or fairness
+User safety
+Legal risk of generated answers
+
+Asssumptions:
+If correct documents are retrieved, the answer will be correct
+Legal article references are a valid ground truth
+Retrieval quality is the main bottleneck in RAG systems
+
+Where it fails in real world :
+Some articles have little standalone meaning
+Dense models may ignore them
+Even hybrid retrieval still misses ~40% of relevant documents
+Not safe for final legal decisions
+
+Potential Research gap : Connecting retrieval quality to answer correctness and safety.
+
+findings : The paper improves how AI finds and ranks legal documents but assumes the language model will behave correctly and does not evaluate answer quality, safety, or real‑world legal risks.
