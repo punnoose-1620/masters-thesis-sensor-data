@@ -1,0 +1,20 @@
+Research gap
+...............
+
+Despite increasing interest in conversational AI, there is a lack of design- oriented and empirical research examining chatbot based on solutions for stakeholder communication within organizations that predominantly rely on traditional collaboration tools such as Microsoft Teams, emails, and meetings and the availability or relevant individuals for timely response or meetings.
+
+
+Research Questions
+...................
+
+RQ1 : How can a chatbot be designed to support stakeholder communication to access data within organizations that rely on traditional collaboration tools such as Microsoft Teams, emails and meetings ?
+
+RQ2 :How does chatbot based stakeholder communication compare to traditional communication tools in terms of response time?
+
+RQ3 : What factors influence stakeholder acceptance and trust n chatbot based communication system?
+
+RQ4 : In what ways can chatbot based solutions complement or enhance existing stakeholder communication practices within organisation practices within organizations?
+
+
+
+
