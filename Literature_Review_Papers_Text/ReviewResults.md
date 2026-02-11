@@ -2,26 +2,25 @@
 
 This report compares the project idea (from *LiteratureReviewHelper.ipynb*, PROJECT_CONTEXT) with the ideas implemented in the papers contained in `punnoose_papers.txt` and `deepa_papers.txt`. Each factual claim is cited to a specific paper with the relevant sentence.
 
-**Section:** Cross-cutting comparison of our hybrid chatbot architecture with the most relevant literature across both Deepa and Punnoose paper sets.
+**Section:** Cross-cutting comparison of our agentic chatbot approach with the most relevant literature across both Deepa and Punnoose paper sets.
 
 **Thresholding:** Only papers with relevance **≥ 0.70** in `ReviewDeepaPapers.md` and `ReviewPunnoosePapers.md` are used as direct evidence in this report; lower-scoring papers are excluded from further analysis here.
 
 **Next Step:** Perform qualitative reliability assessment of these high-relevance papers and refine our research questions and evaluation design based on their strengths and weaknesses.
 
+**Pivot (current project direction):** The project has moved on from the original design (intent-only LLM + rule-based function selector + code executor). We now adopt an **agentic approach**: the LLM chooses which tools/functions to call and orchestrates execution. Intent classification remains relevant as related work and a possible baseline; it is not the primary design.
+
 ---
 
 ## 1. Our Idea
 
-Our proposed system is a **stakeholder-facing chatbot** that answers user queries by combining:
+Our proposed system is a **stakeholder-facing chatbot** using an **agentic** design:
 
-- **LLM-based intent understanding** — An Intent Identifier (e.g., Gemini, GPT, Claude) classifies the user’s intent, assigns confidence, and groups intents; it is used only for semantic understanding, not for execution.
-- **Deterministic function selection** — A non-LLM, rule-based Function Selector maps intents to predefined backend functions, validates inputs and preconditions, and decides whether to execute or request clarification.
-- **Structured data retrieval and execution** — A Code Executor runs the selected function, fetches data from structured sources (databases, predefined datasets), applies business logic, and produces raw structured data with no natural language generation at this stage.
-- **LLM-based result interpretation** — A Data Interpreter (LLM) turns raw execution results into human-readable explanations, summaries, and contextual insights; it has no access to execution logic and operates only on raw data, the original query, and optional metadata.
+- **LLM with tool use** — The LLM receives the user query and a set of available tools/functions (e.g. via schemas). It decides which tool(s) to call and with what arguments, and may chain multiple calls.
+- **Tool execution** — A separate executor runs the selected function(s), fetches data from structured sources, and returns results to the LLM.
+- **Response generation** — The LLM turns execution results (and optional context) into a natural-language response for the user.
 
-**Core design principle:** Separate reasoning from execution to ensure **predictability**, **controllability**, **reduced hallucination risk**, and **easier comparison** with task-oriented dialogue systems, slot-filling approaches, and agent-based LLM workflows. Critical decisions (which function to run, what to execute) are **rule-based and auditable**; LLMs are used only where probabilistic reasoning is beneficial (understanding and explaining).
-
-**Positioning:** The system is comparable to task-oriented dialogue systems (TOD), LLM agent frameworks (ReAct, Toolformer, AutoGPT), hybrid neuro-symbolic architectures, and enterprise conversational AI platforms. Key differentiators: **dual-LLM design** (intent + interpretation), **deterministic execution core**, and **explicit input and function schemas**.
+**Core design principle:** Use the LLM for both *understanding* and *tool choice* to gain **flexibility** and easier extension (new tools without rewriting a rule map). We still aim for **reliability** and **interpretability** via a fixed tool set, structured outputs where possible, and local or trusted deployment. The system is comparable to agentic LLM frameworks (ReAct, Toolformer, OpenAI function calling) and multi-agent orchestration (e.g. GateLens, GoNoGo).
 
 ---
 
@@ -29,10 +28,23 @@ Our proposed system is a **stakeholder-facing chatbot** that answers user querie
 
 Derived from the project context and positioning:
 
-1. **Separation of concerns:** Can separating *understanding* (LLM intent), *decision* (rule-based function selection), *execution* (code executor), and *explanation* (LLM interpreter) reduce hallucination and improve interpretability compared to end-to-end RAG or agentic LLM systems?
-2. **Intent vs. execution:** Does using the LLM only for intent classification (and interpretation), with deterministic function selection and execution, yield more predictable and auditable behaviour than systems where the LLM chooses and invokes tools/functions?
-3. **Stakeholder-facing QA:** How does this hybrid architecture perform for stakeholder-facing question answering over structured data (e.g., domain datasets, databases) compared to pure RAG chatbots or multi-agent LLM systems in similar domains (e.g., automotive, compliance)?
-4. **Comparability:** How does the design compare with slot-filling, semantic frame parsing, and ontology-driven dialogue systems in terms of ambiguity handling, confidence-aware behaviour, and explainability?
+1. **Agentic vs. direct:** When does an agentic (tool-using) LLM outperform a direct LLM (no tools) for stakeholder-facing QA over structured data in domains such as automotive or compliance?
+2. **Reliability and interpretability:** How can we improve reliability, interpretability, and auditability of agentic systems (e.g. structured tool outputs, logging, guardrails) while keeping flexibility?
+3. **Stakeholder-facing QA:** How does our agentic architecture perform for stakeholder-facing question answering compared to pure RAG chatbots or intent-based + deterministic execution designs in similar domains?
+4. **Safety and adoption:** How do we address hallucination, tool misuse, and data exposure (e.g. local deployment, tool allowlists) so the system is acceptable in sensitive or regulated settings?
+
+---
+
+## 2a. Review Synthesis
+
+The high-relevance papers (≥ 0.70) cluster into a few themes that set the context for our agentic project:
+
+- **Agentic and LLM-driven systems** — GateLens, GoNoGo, Simple Action Model, and “Querying Large Automotive Software Models: Agentic vs. Direct” use the LLM to choose tools or orchestrate steps. They show that agentic designs are viable for automotive and release workflows but raise questions about consistency, reliability, and when agentic beats direct LLM use.
+- **RAG and document QA** — Tax Law RAG, Safety Requirements RAG, Adopting RAG for vehicle design, and Optimizing RAG for automotive PDFs focus on retrieval, re-ranking, and generation. They stress hallucination risk when retrieval is poor and the need for reliable, explainable outputs in safety or compliance.
+- **Intent classification (related work)** — BERT/RoBERTa intent, French recruitment chatbot, NNSI, MAML+embeddings, and LLM function calling with structured outputs treat intent or tool-call format as central. They offer baselines or techniques we can compare against or reuse (e.g. structured outputs for tool calls).
+- **Domain and security** — Several papers (e.g. Adopting RAG, Safety Requirements RAG) emphasise domain-specific knowledge, local deployment, and avoiding exposure of sensitive data to external APIs.
+
+Across these themes, a recurring limitation is that agentic and RAG systems still need better reliability, interpretability, and control (e.g. when the LLM chooses the wrong tool or hallucinates). The gaps below summarise where our agentic project can contribute.
 
 ---
 
@@ -54,19 +66,19 @@ Across the **high-relevance papers** (relevance ≥ 0.70) in **punnoose_papers.t
 
 ## 4. How Our Project Can Address This Research Gap
 
-- **Hallucination and reliability:** We restrict the LLM to *intent* and *interpretation* and keep *which function runs* and *what code executes* deterministic. So retrieval errors or model drift affect only understanding and wording, not which backend runs or what data is fetched — reducing the risk that “irrelevant or even incorrect context” leads to wrong actions. *Cite: “The risk of hallucinations is related to the information accessible to the LLM, and its suitability to solve the task at hand” (Towards Automated Safety Requirements Derivation Using Agent-based RAG).* By giving the interpreter only *retrieved execution results* (and optional metadata), we align with the need for “highly reliable and explainable results” in safety-sensitive settings.
+- **Hallucination and reliability:** We use an agentic LLM but constrain the **tool set** and ground responses in **execution results**. We can evaluate and mitigate wrong tool choice or hallucinated calls (e.g. logging, guardrails). *Cite: “The risk of hallucinations is related to the information accessible to the LLM, and its suitability to solve the task at hand” (Towards Automated Safety Requirements Derivation Using Agent-based RAG).* Aligning with “highly reliable and explainable results” in safety-sensitive settings remains a goal via structured outputs and evaluation.
 
-- **Retrieval relevance:** Where we add RAG (e.g. for the interpreter or for intent disambiguation), we can adopt the same directions as the literature: hybrid retrieval, re-ranking, and chunking strategies (e.g. Enhancing Retrieval and Re-ranking in RAG, Optimizing RAG for Automotive PDF Chatbots). Our architecture still bounds the impact of bad retrieval: bad retrieval cannot directly change *which* function is selected, because that is rule-based from the intent label.
+- **Retrieval relevance:** If we add RAG as a tool or context source, we adopt the same directions as the literature (hybrid retrieval, re-ranking). We can study how retrieval quality affects agentic behaviour and bound impact via tool design (e.g. which tools are allowed).
 
-- **Domain-specific knowledge:** We do not rely on the LLM to “know” the domain; we inject domain through the **function map**, **preconditions**, and **structured data sources**. So we address “lack of domain-specific knowledge” by encoding domain in the deterministic layer (functions, schemas, data) rather than in the model’s parameters. *Cite: “To integrate additional domain-specific information, techniques such as fine-tuning or retrieval-augmented generation (RAG) are commonly used” (Safety Requirements RAG).* We combine that with a fixed intent→function mapping so domain behaviour is auditable.
+- **Domain-specific knowledge:** We inject domain through **tool schemas**, **allowed functions**, and **structured data** the tools can access. So we address “lack of domain-specific knowledge” by encoding domain in the tool layer rather than relying only on the model’s parameters. *Cite: Safety Requirements RAG on integrating domain-specific information.*
 
-- **Intent with limited data:** Our intent layer can use the same techniques as the reviewed papers: few-shot or zero-shot LLM intent detection, MAML + embeddings for few-shot intent, NNSI-style data augmentation, or traditional classifiers (BERT/RoBERTa, Naive Bayes, Logistic Regression) when labels exist. So we address “lack of real-world training data” and “minimal training data” by allowing pluggable intent models and, where needed, small labelled sets or augmentation.
+- **Intent with limited data:** Agentic LLMs can work with minimal labelled data (few-shot, zero-shot tool use). We can compare or combine with intent-classification techniques (MAML+embeddings, NNSI-style augmentation) as baselines or for specific sub-tasks.
 
-- **Rule-based inflexibility:** We keep rules only for *function selection* (intent → function), not for *understanding* the user. Understanding is done by the LLM, which handles paraphrasing, misspellings, and variation; the rule layer then maps the *interpreted intent* to a function. So we mitigate “rule-based systems are inflexible … less robust to variations in user input” by using the LLM for robustness and rules for controllability. *Cite: Comparative Analysis of Intent Classification in Indonesian Chatbots (BERT and RoBERTa).*
+- **Rule-based vs. flexible understanding:** We use the LLM for both understanding and tool choice, so we avoid the “rule-based inflexibility” the literature cites (e.g. Comparative Analysis BERT and RoBERTa). We trade some predictability for flexibility.
 
-- **Security and data exposure:** We can run the intent LLM and the interpreter LLM locally or in a trusted environment; the only component that must access structured data is the Code Executor, which does not send raw user text or proprietary docs to external APIs. So we align with the concern that “sending the secret information to online services” is problematic (Adopting RAG for LLM-Aided Future Vehicle Design).
+- **Security and data exposure:** We can run the agentic LLM locally or in a trusted environment and restrict which tools (and thus which data) are exposed. So we align with the concern that “sending the secret information to online services” is problematic (Adopting RAG for LLM-Aided Future Vehicle Design).
 
-- **Controlled use of LLMs:** We explicitly separate “understanding ≠ decision ≠ execution ≠ explanation.” No reviewed paper in these sets proposes exactly this split: many use RAG + one LLM for full answers, or multi-agent LLM orchestration, or LLM-driven function/tool choice. Our project fills the gap of a **hybrid architecture with a deterministic execution core** and dual-LLM (intent + interpreter) design.
+- **Controlled use of LLMs:** We use an **agentic** design (LLM chooses tools) but still aim for control via a **fixed tool set**, **structured outputs** where possible, and **evaluation** of reliability and tool misuse. Our project contributes an agentic system designed and evaluated for stakeholder-facing QA in domains where the literature calls for reliability and interpretability.
 
 ---
 
@@ -83,31 +95,26 @@ Across the **high-relevance papers** (relevance ≥ 0.70) in **punnoose_papers.t
 
 ## 6. According to These Papers, What Might Be the Downsides / Limitations of Our Approach
 
-- **Rule-based inflexibility and maintenance:**  
-  **Paper:** Comparative Analysis of Intent Classification in Indonesian Chatbots Using BERT and RoBERTa Models (*deepa_papers.txt*).  
-  **Quote:** “Rule-based systems are inflexible [3], involve high development and maintenance costs due to the need for manual updates [4], and are less robust to variations in user input, often failing to recognize intent in cases of misspellings, slang, or acronyms [5].”  
-  **Implication for us:** Our *function selector* is rule-based (intent → function). If the intent set or function map is large, manual updates and preconditions could become costly. We mitigate by using an LLM for *understanding* (so robustness to variation is in the intent layer), but the rule layer itself remains rigid and must be kept in sync with the domain.
-
-- **LLM format compliance when used for intent:**  
+- **LLM tool choice and format compliance:**  
   **Paper:** Enhancing LLM Function Calling with Structured Outputs (*deepa_papers.txt*).  
   **Quote:** “The prevalent approach relies on instructing the LLM via system prompts to produce outputs adhering to a specified schema. While often effective, this method can suffer from inconsistencies, where the LLM fails to strictly follow the requested format, leading to parsing errors and unreliable behavior in downstream applications.”  
-  **Implication for us:** Our intent layer expects the LLM to output a *structured intent label*. If the model does not adhere to the schema, parsing can fail and the deterministic selector may get wrong or empty input, leading to fallback or errors. We may need constrained decoding or structured-output methods (as in that paper) for the intent LLM.
+  **Implication for us:** Our agentic LLM must output valid tool calls. If the model does not adhere to the schema, parsing can fail or the wrong tool may be invoked. We may need constrained decoding or structured-output methods (as in that paper).
 
-- **Incomplete responses when retrieval/data is missing:**  
-  **Implication for us:** We are not RAG-only; we have a Code Executor over structured data. If the function map or data sources do not cover a user need, our system can only clarify or refuse — we might produce “incomplete” answers in the sense of not covering unmodelled intents or missing data. So the limitation of “missing relevant information” appears as *missing functions or data* in our design, not only missing retrieval.
+- **Less predictability than deterministic execution:**  
+  With agentic design, the LLM chooses which tools to call. Wrong or unnecessary tool choices are possible; behaviour is harder to audit than a rule-based intent→function map. We trade predictability for flexibility.
 
-- **Hallucination in the interpreter:**  
+- **Incomplete responses or missing tools:**  
+  If the tool set or data sources do not cover a user need, the system can only refuse or give a partial answer. “Missing relevant information” appears as missing tools or data, not only retrieval.
+
+- **Hallucination and context quality:**  
   **Paper:** Towards Automated Safety Requirements Derivation Using Agent-based RAG (*punnoose_papers.txt*).  
   **Quote:** “If irrelevant or even incorrect context is retrieved, the probability of hallucinations is exacerbated.”  
-  **Implication for us:** Our Data Interpreter receives *execution results* (and optional context). If we later add RAG for the interpreter, the same risk applies: bad or irrelevant context could lead the interpreter to “hallucinate” around the answer. So any RAG used in the interpretation stage should be designed and evaluated to avoid exacerbating hallucinations.
+  **Implication for us:** If we add RAG or extra context for the agent, bad context can worsen hallucinations or tool choice. We should design and evaluate any such addition carefully.
 
 - **Adoption barriers for sensitive data:**  
   **Paper:** Adopting RAG for LLM-Aided Future Vehicle Design (*punnoose_papers.txt*).  
-  **Quote:** “Providing documents and other specification-related information in automotive was considered quite problematic — as it involved practically sending the secret information to online services and other parties involved. For that reason, the adoption of LLM-aided tools in automotive was considered quite problematic.”  
-  **Implication for us:** If the *intent* or *interpreter* LLM is cloud-based, user queries or internal context might be sent to external services. To avoid the same adoption barrier, we need local or trusted deployment for both LLMs, or strict filtering so that no sensitive payloads leave the organisation.
-
-- **Less flexibility than full agentic LLM:**  
-  Papers such as GateLens, GoNoGo, Simple Action Model, and Querying Large Automotive Software Models (agentic vs. direct) use the LLM to *choose* tools or *orchestrate* steps. Our approach fixes the set of functions and the mapping from intent to function. So we trade flexibility (e.g. arbitrary tool chains, new tools at runtime) for predictability and auditability — which can be a limitation in highly dynamic or exploratory use cases.
+  **Quote:** “Providing documents and other specification-related information in automotive was considered quite problematic — as it involved practically sending the secret information to online services and other parties involved.”  
+  **Implication for us:** If the agentic LLM is cloud-based, user queries or tool inputs might be sent externally. We need local or trusted deployment, or strict filtering, so that no sensitive payloads leave the organisation.
 
 ---
 
@@ -116,35 +123,31 @@ Across the **high-relevance papers** (relevance ≥ 0.70) in **punnoose_papers.t
 - **Explicit need for reliable and explainable LLM outputs:**  
   **Paper:** Towards Automated Safety Requirements Derivation Using Agent-based RAG (*punnoose_papers.txt*).  
   **Quote:** “However, to efficiently support safety engineers in these tasks, LLMs must generate highly reliable and explainable results.”  
-  **Strength:** Our design separates *generation of the final answer* (Data Interpreter) from *decision and execution*. The interpreter only explains *given* data; it does not decide which function runs or what data is fetched. That makes it easier to constrain and explain outputs and aligns with the need for “highly reliable and explainable results” in safety or compliance contexts.
+  **Strength:** We still aim for reliable and explainable outputs. We can ground the agent in **tool execution results** and use a **fixed tool set** so that answers are tied to actual data; we can evaluate and improve tool-choice reliability.
 
-- **Grounding and hallucination reduction via retrieval/context:**  
+- **Grounding in execution results:**  
   **Paper:** Enhancing Retrieval and Re-ranking in RAG: A Case Study on Tax Law (*deepa_papers.txt*).  
   **Quote:** “By incorporating retrieved evidence, RAG models significantly reduce hallucinations and improve factual accuracy [4, 5].”  
-  **Strength:** We ground the *interpreter* in **execution results** (and optionally in retrieved context). So we do not ask the LLM to “invent” which backend to call or what data exists — we give it the actual output of the Code Executor. That is a form of strong grounding that can “reduce hallucinations and improve factual accuracy” for the answer text, as long as the interpreter is constrained to the provided data.
+  **Strength:** We ground the agent in **execution results** from tools (and optionally retrieved context). The LLM does not “invent” data — it reasons over actual tool outputs, which can “reduce hallucinations and improve factual accuracy” when we constrain the agent to use tool results.
 
-- **Deterministic tools for solving the task:**  
+- **Deterministic tool execution:**  
   **Paper:** Towards Automated Safety Requirements Derivation Using Agent-based RAG (*punnoose_papers.txt*).  
   **Quote:** “Subsequently, deterministic tools are leveraged to actually solve the task.”  
-  **Strength:** The reviewed paper itself uses “deterministic tools” after retrieval/LLM steps. Our architecture makes this explicit: the **Function Selector** and **Code Executor** are deterministic. So “deterministic tools are leveraged to actually solve the task” is a direct strength of our approach — we centralise the solving step in a deterministic core rather than in the LLM.
+  **Strength:** Tool *execution* is still deterministic (the executor runs the chosen function and returns data). So “deterministic tools are leveraged to actually solve the task” applies: the LLM chooses *which* tool; the execution step itself is deterministic.
 
-- **Interpretable RAG / knowledge-aware systems:**  
+- **Interpretable and layered design:**  
   **Paper:** Enhancing Retrieval and Re-ranking in RAG: A Case Study on Tax Law (*deepa_papers.txt*).  
-  **Quote:** “These results highlight the importance of layered architecture that integrates both hybrid retrieval and re-ranking to enhance relevance, especially in regulation-heavy domains. Our findings offer practical insights into building robust and **interpretable RAG systems** for legal and structured text retrieval.”  
-  **Strength:** We prioritise interpretability by making each layer inspectable: intent (LLM), function choice (rules), execution (code), explanation (LLM on fixed data). So we align with the goal of “interpretable” systems; if we add RAG, we can adopt similar layered retrieval/re-ranking for the parts that need it.
+  **Quote:** “Our findings offer practical insights into building robust and **interpretable RAG systems** for legal and structured text retrieval.”  
+  **Strength:** We can keep interpretability by making tool calls, tool results, and final answers inspectable (logged, traceable). If we add RAG as a tool, we can adopt layered retrieval/re-ranking as in the literature.
 
-- **Intent classification as a core, well-studied component:**  
-  **Papers:** e.g. Comparative Analysis of Intent Classification in Indonesian Chatbots (BERT and RoBERTa), Intent Classification French Recruitment Chatbot (CamemBERT), NNSI for Intent Classification, MAML + embeddings for few-shot intent (*deepa_papers.txt*).  
-  **Strength:** The literature treats intent classification as central to chatbots and dialogue systems. Our design puts **intent** at the centre and then connects it to a **deterministic** backend. So we build on a well-understood, comparable component (intent classification) while differentiating in the execution layer (rule-based function selection + code executor).
+- **Flexibility and single-model design:**  
+  **Papers:** GateLens, GoNoGo, Simple Action Model, Agentic vs. Direct LLM (*punnoose_papers.txt*).  
+  **Strength:** Agentic design gives **flexibility**: new tools can be added without maintaining a rule map; the LLM handles paraphrasing and variation. We align with the literature that uses LLMs to choose and orchestrate tools for complex tasks.
 
 - **Security and local deployment:**  
   **Paper:** Adopting RAG for LLM-Aided Future Vehicle Design (*punnoose_papers.txt*).  
-  **Quote:** “Our results demonstrate that while GPT-4 offers superior performance, LLAMA3 and Mistral also show promising capabilities for **local deployment**, **addressing data privacy concerns** in automotive applications.”  
-  **Strength:** Our pipeline can run with local or trusted LLMs for intent and interpreter; only the Code Executor needs to touch internal data. So we can “address data privacy concerns” by avoiding sending sensitive documents or user inputs to external APIs, consistent with the emphasis on local deployment and privacy in the literature.
-
-- **Separation of parametric knowledge and execution:**  
-  **Paper:** RAGRouter and related RAG/LLM papers (*punnoose* / *deepa*) discuss “parametric knowledge” vs. “retrieval-induced” behaviour.  
-  **Strength:** We clearly separate **what the model knows** (intent semantics, how to explain) from **what the system does** (which function runs, what data is read). That makes it easier to reason about correctness (execution is deterministic) and to update behaviour (change function map or data) without retraining the LLM.
+  **Quote:** “LLAMA3 and Mistral also show promising capabilities for **local deployment**, **addressing data privacy concerns** in automotive applications.”  
+  **Strength:** We can run the agentic LLM locally or in a trusted environment and restrict which tools (and thus which data) are available. So we can “address data privacy concerns” and avoid sending sensitive payloads to external APIs.
 
 ---
 
