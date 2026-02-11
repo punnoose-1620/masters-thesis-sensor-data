@@ -205,6 +205,7 @@ def fetch_html_from_url(url):
 def get_version_map_full(v_type:str='software'):
     """
     Fetches the version map full from the given URL using an HTTP GET request.
+    Returns all wice wiki versions
     """
     if v_type == 'software':
         release_history_url = RELEASE_HISTORIES['software']
