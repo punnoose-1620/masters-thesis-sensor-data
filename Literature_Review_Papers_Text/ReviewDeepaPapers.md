@@ -2,6 +2,8 @@
 
 **Context:** Stakeholder-facing chatbot on a hybrid LLM–deterministic architecture: structured query → LLM intent identification only → rule-based function selector → code executor → LLM data interpreter → response. Goal: interpretability, predictability, low hallucination.
 
+**Section:** These papers are mostly focused on the approach as a whole, including alternative approaches or how this can be done in pure-code versions using AI models from scratch.
+
 **Thresholding:** Papers are given relevance scores based on how connected they are to our approach. Papers below 0.70 relevance rating are excempted/avoided from further analysis. The below list is arranged on the basis of relevance ratings. 
 
 **Next Step:** Qualitative Analysis for paper's reliability is yet to be done. This will be our next step.

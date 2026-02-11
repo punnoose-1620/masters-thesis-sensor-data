@@ -2,6 +2,12 @@
 
 This report compares the project idea (from *LiteratureReviewHelper.ipynb*, PROJECT_CONTEXT) with the ideas implemented in the papers contained in `punnoose_papers.txt` and `deepa_papers.txt`. Each factual claim is cited to a specific paper with the relevant sentence.
 
+**Section:** Cross-cutting comparison of our hybrid chatbot architecture with the most relevant literature across both Deepa and Punnoose paper sets.
+
+**Thresholding:** Only papers with relevance **≥ 0.70** in `ReviewDeepaPapers.md` and `ReviewPunnoosePapers.md` are used as direct evidence in this report; lower-scoring papers are excluded from further analysis here.
+
+**Next Step:** Perform qualitative reliability assessment of these high-relevance papers and refine our research questions and evaluation design based on their strengths and weaknesses.
+
 ---
 
 ## 1. Our Idea
@@ -30,18 +36,18 @@ Derived from the project context and positioning:
 
 ---
 
-## 3. Research Gaps Common to All Papers in These Text Files
+## 3. Research Gaps Common to the High-Relevance Papers
 
-Across **punnoose_papers.txt** (14 papers) and **deepa_papers.txt** (23 papers), the following gaps recur:
+Across the **high-relevance papers** (relevance ≥ 0.70) in **punnoose_papers.txt** and **deepa_papers.txt**, the following gaps recur:
 
 | Gap | Papers (representative) |
 |-----|-------------------------|
-| **Hallucination and reliability** | LLMs must produce “highly reliable and explainable results” (Safety Requirements RAG); “LLMs and VLMs are prone to hallucination” (BetterCheck); RAG can “reduce hallucinations and improve factual accuracy” when retrieval is good, but “if irrelevant or even incorrect context is retrieved, the probability of hallucinations is exacerbated” (Tax Law RAG; Safety Requirements RAG). |
-| **Retrieval relevance** | “Existing RAG approaches … their performance deteriorates when handling complex queries and it becomes increasingly harder to retrieve the most relevant information” (Safety Requirements RAG); “Traditional RAG systems rely heavily on internal document retrieval, which can lead to incomplete or inaccurate responses when relevant information is missing” (Secure Multifaceted-RAG). |
-| **Domain-specific knowledge** | “Conventional approaches that utilise pre-trained LLMs to assist in safety analyses typically lack domain-specific knowledge” (Safety Requirements RAG); “The limitation of a lack of domain-specific knowledge in understanding technical terms and processes within automotive and safety domains is acknowledged” (Explicating Tacit Regulatory Knowledge). |
+| **Hallucination and reliability** | LLMs must produce “highly reliable and explainable results” (Safety Requirements RAG); RAG can “reduce hallucinations and improve factual accuracy” when retrieval is good, but “if irrelevant or even incorrect context is retrieved, the probability of hallucinations is exacerbated” (Tax Law RAG; Safety Requirements RAG). |
+| **Retrieval relevance** | “Existing RAG approaches … their performance deteriorates when handling complex queries and it becomes increasingly harder to retrieve the most relevant information” (Safety Requirements RAG). |
+| **Domain-specific knowledge** | “Conventional approaches that utilise pre-trained LLMs to assist in safety analyses typically lack domain-specific knowledge” (Safety Requirements RAG). |
 | **Intent classification with limited data** | “The dependency on large annotated datasets remains a critical bottleneck”; “the need for models to understand and classify intents with minimal training data” (MAML + embeddings for few-shot intent); “Intent classifiers are generally lacking in real-world training data” (NNSI for intent classification). |
 | **Rule-based vs. flexible understanding** | “Rule-based systems are inflexible, involve high development and maintenance costs due to the need for manual updates, and are less robust to variations in user input, often failing to recognize intent in cases of misspellings, slang, or acronyms” (Comparative Analysis BERT and RoBERTa for Indonesian Chatbots). |
-| **Security and data exposure** | “Providing documents and other specification-related information in automotive was considered quite problematic — as it involved practically sending the secret information to online services and other parties involved” (Adopting RAG for LLM-Aided Future Vehicle Design); “leveraging external Large Language Models … introduces security risks and high operational costs” (Secure Multifaceted-RAG). |
+| **Security and data exposure** | “Providing documents and other specification-related information in automotive was considered quite problematic — as it involved practically sending the secret information to online services and other parties involved” (Adopting RAG for LLM-Aided Future Vehicle Design). |
 | **Controlled use of LLMs** | Many papers use LLMs for end-to-end generation, tool choice, or multi-agent orchestration without a deterministic “execution core”; few explicitly separate *intent only* (LLM) from *function selection and execution* (rules/code). |
 
 ---
@@ -50,7 +56,7 @@ Across **punnoose_papers.txt** (14 papers) and **deepa_papers.txt** (23 papers),
 
 - **Hallucination and reliability:** We restrict the LLM to *intent* and *interpretation* and keep *which function runs* and *what code executes* deterministic. So retrieval errors or model drift affect only understanding and wording, not which backend runs or what data is fetched — reducing the risk that “irrelevant or even incorrect context” leads to wrong actions. *Cite: “The risk of hallucinations is related to the information accessible to the LLM, and its suitability to solve the task at hand” (Towards Automated Safety Requirements Derivation Using Agent-based RAG).* By giving the interpreter only *retrieved execution results* (and optional metadata), we align with the need for “highly reliable and explainable results” in safety-sensitive settings.
 
-- **Retrieval relevance:** Where we add RAG (e.g. for the interpreter or for intent disambiguation), we can adopt the same directions as the literature: hybrid retrieval, re-ranking, and chunking strategies (e.g. Enhancing Retrieval and Re-ranking in RAG, Chunking Techniques, Optimizing RAG for Automotive PDF Chatbots). Our architecture still bounds the impact of bad retrieval: bad retrieval cannot directly change *which* function is selected, because that is rule-based from the intent label.
+- **Retrieval relevance:** Where we add RAG (e.g. for the interpreter or for intent disambiguation), we can adopt the same directions as the literature: hybrid retrieval, re-ranking, and chunking strategies (e.g. Enhancing Retrieval and Re-ranking in RAG, Optimizing RAG for Automotive PDF Chatbots). Our architecture still bounds the impact of bad retrieval: bad retrieval cannot directly change *which* function is selected, because that is rule-based from the intent label.
 
 - **Domain-specific knowledge:** We do not rely on the LLM to “know” the domain; we inject domain through the **function map**, **preconditions**, and **structured data sources**. So we address “lack of domain-specific knowledge” by encoding domain in the deterministic layer (functions, schemas, data) rather than in the model’s parameters. *Cite: “To integrate additional domain-specific information, techniques such as fine-tuning or retrieval-augmented generation (RAG) are commonly used” (Safety Requirements RAG).* We combine that with a fixed intent→function mapping so domain behaviour is auditable.
 
@@ -58,7 +64,7 @@ Across **punnoose_papers.txt** (14 papers) and **deepa_papers.txt** (23 papers),
 
 - **Rule-based inflexibility:** We keep rules only for *function selection* (intent → function), not for *understanding* the user. Understanding is done by the LLM, which handles paraphrasing, misspellings, and variation; the rule layer then maps the *interpreted intent* to a function. So we mitigate “rule-based systems are inflexible … less robust to variations in user input” by using the LLM for robustness and rules for controllability. *Cite: Comparative Analysis of Intent Classification in Indonesian Chatbots (BERT and RoBERTa).*
 
-- **Security and data exposure:** We can run the intent LLM and the interpreter LLM locally or in a trusted environment; the only component that must access structured data is the Code Executor, which does not send raw user text or proprietary docs to external APIs. So we align with the concern that “sending the secret information to online services” is problematic (Adopting RAG for LLM-Aided Future Vehicle Design) and with the need for “confidentiality-preserving filter” and “proprietary corporate data is not sent to external models” (Secure Multifaceted-RAG).
+- **Security and data exposure:** We can run the intent LLM and the interpreter LLM locally or in a trusted environment; the only component that must access structured data is the Code Executor, which does not send raw user text or proprietary docs to external APIs. So we align with the concern that “sending the secret information to online services” is problematic (Adopting RAG for LLM-Aided Future Vehicle Design).
 
 - **Controlled use of LLMs:** We explicitly separate “understanding ≠ decision ≠ execution ≠ explanation.” No reviewed paper in these sets proposes exactly this split: many use RAG + one LLM for full answers, or multi-agent LLM orchestration, or LLM-driven function/tool choice. Our project fills the gap of a **hybrid architecture with a deterministic execution core** and dual-LLM (intent + interpreter) design.
 
@@ -68,10 +74,10 @@ Across **punnoose_papers.txt** (14 papers) and **deepa_papers.txt** (23 papers),
 
 - **Empirical comparison:** Compare our hybrid pipeline (intent → deterministic function → executor → interpreter) against pure RAG chatbots and agentic LLM systems on the same stakeholder QA tasks (e.g. automotive, compliance) for accuracy, hallucination rate, latency, and interpretability.
 - **Intent model choice:** Systematically compare LLM-based intent vs. BERT/RoBERTa vs. few-shot (MAML + embeddings) vs. classical ML (e.g. Naive Bayes, Logistic Regression) for intent accuracy, robustness to paraphrasing, and required training data — and their interaction with the deterministic function selector.
-- **RAG in our pipeline:** If RAG is added (e.g. for the interpreter or for disambiguation), study which retrieval/re-ranking/chunking strategies (as in Tax Law RAG, Chunking Techniques, Optimizing RAG for Automotive PDF Chatbots) work best and how they interact with our separation of intent, execution, and interpretation.
-- **Formalisation and safety:** Investigate how to export or formalise our “function map” and preconditions so they can be checked against regulatory or safety requirements (linking to themes in Explicating Tacit Regulatory Knowledge and Generating Automotive Code).
+- **RAG in our pipeline:** If RAG is added (e.g. for the interpreter or for disambiguation), study which retrieval/re-ranking strategies (as in Tax Law RAG, Optimizing RAG for Automotive PDF Chatbots) work best and how they interact with our separation of intent, execution, and interpretation.
+- **Formalisation and safety:** Investigate how to export or formalise our “function map” and preconditions so they can be checked against regulatory or safety requirements.
 - **Scaling and maintenance:** Study the cost of maintaining the intent→function map and preconditions as the domain grows (new intents, new functions, new data sources) and how to semi-automate or recommend updates from usage logs or feedback.
-- **Multimodal and enterprise:** If extending to enterprise or multimodal settings, combine our architecture with security filtering and multi-source retrieval (as in Secure Multifaceted-RAG) and, if relevant, with hallucination detection (as in BetterCheck) for any generative part.
+- **Multimodal and enterprise:** If extending to enterprise or multimodal settings, combine our architecture with security filtering and multi-source retrieval, and, if relevant, with hallucination detection for any generative part.
 
 ---
 
@@ -88,8 +94,6 @@ Across **punnoose_papers.txt** (14 papers) and **deepa_papers.txt** (23 papers),
   **Implication for us:** Our intent layer expects the LLM to output a *structured intent label*. If the model does not adhere to the schema, parsing can fail and the deterministic selector may get wrong or empty input, leading to fallback or errors. We may need constrained decoding or structured-output methods (as in that paper) for the intent LLM.
 
 - **Incomplete responses when retrieval/data is missing:**  
-  **Paper:** Secure Multifaceted-RAG for Enterprise: Hybrid Knowledge Retrieval with Security Filtering (*punnoose_papers.txt*).  
-  **Quote:** “Traditional RAG systems rely heavily on internal document retrieval, which can lead to incomplete or inaccurate responses when relevant information is missing.”  
   **Implication for us:** We are not RAG-only; we have a Code Executor over structured data. If the function map or data sources do not cover a user need, our system can only clarify or refuse — we might produce “incomplete” answers in the sense of not covering unmodelled intents or missing data. So the limitation of “missing relevant information” appears as *missing functions or data* in our design, not only missing retrieval.
 
 - **Hallucination in the interpreter:**  
@@ -100,7 +104,7 @@ Across **punnoose_papers.txt** (14 papers) and **deepa_papers.txt** (23 papers),
 - **Adoption barriers for sensitive data:**  
   **Paper:** Adopting RAG for LLM-Aided Future Vehicle Design (*punnoose_papers.txt*).  
   **Quote:** “Providing documents and other specification-related information in automotive was considered quite problematic — as it involved practically sending the secret information to online services and other parties involved. For that reason, the adoption of LLM-aided tools in automotive was considered quite problematic.”  
-  **Implication for us:** If the *intent* or *interpreter* LLM is cloud-based, user queries or internal context might be sent to external services. To avoid the same adoption barrier, we need local or trusted deployment for both LLMs, or strict filtering so that no sensitive payloads leave the organisation (as in Secure Multifaceted-RAG).
+  **Implication for us:** If the *intent* or *interpreter* LLM is cloud-based, user queries or internal context might be sent to external services. To avoid the same adoption barrier, we need local or trusted deployment for both LLMs, or strict filtering so that no sensitive payloads leave the organisation.
 
 - **Less flexibility than full agentic LLM:**  
   Papers such as GateLens, GoNoGo, Simple Action Model, and Querying Large Automotive Software Models (agentic vs. direct) use the LLM to *choose* tools or *orchestrate* steps. Our approach fixes the set of functions and the mapping from intent to function. So we trade flexibility (e.g. arbitrary tool chains, new tools at runtime) for predictability and auditability — which can be a limitation in highly dynamic or exploratory use cases.
@@ -149,11 +153,8 @@ Across **punnoose_papers.txt** (14 papers) and **deepa_papers.txt** (23 papers),
 | Source file | Paper (short) | Section(s) cited |
 |-------------|----------------|------------------|
 | punnoose_papers.txt | Towards Automated Safety Requirements Derivation Using Agent-based RAG | 3, 4, 6, 7 |
-| punnoose_papers.txt | BetterCheck: Towards Safeguarding VLMs for Automotive Perception Systems | 3, 6 |
 | punnoose_papers.txt | Adopting RAG for LLM-Aided Future Vehicle Design | 3, 4, 6, 7 |
-| punnoose_papers.txt | Secure Multifaceted-RAG for Enterprise | 3, 4, 6, 7 |
-| punnoose_papers.txt | Explicating Tacit Regulatory Knowledge from LLMs | 3 |
-| deepa_papers.txt | Enhancing Retrieval and Re-ranking in RAG: A Case Study on Tax Law | 3, 7 |
+| deepa_papers.txt | Enhancing Retrieval and Re-ranking in RAG: A Case Study on Tax Law | 3, 4, 7 |
 | deepa_papers.txt | Comparative Analysis of Intent Classification in Indonesian Chatbots (BERT and RoBERTa) | 3, 4, 6, 7 |
 | deepa_papers.txt | Enhancing LLM Function Calling with Structured Outputs | 6 |
 | deepa_papers.txt | NNSI for Intent Classification; MAML + embeddings for few-shot intent | 3, 4, 7 |
