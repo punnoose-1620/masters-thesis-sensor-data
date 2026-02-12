@@ -6,7 +6,7 @@ from tqdm import tqdm
 from flask_cors import CORS
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 # Flask App
 app = Flask(__name__)
@@ -279,14 +279,33 @@ def getUrlToVersion(version_number):
     else:
         return jsonify({'error': 'No url found for version number'}), 404
 
-@app.route('/get_url_content/<url>')
-def getUrlContent(url):
+@app.route('/get_url_content', methods=['POST'])
+def getUrlContent():
+    """
+    Fetches the content of the given url.
+    Returns the content of the page and the hyperlinks from the page.
+    Arguments (Body):
+        url (str): The url of the page to fetch the content of.
+    Returns (Response):
+        contentOfPage (str): The content of the page.
+        hyperlinksFromPage (list): The hyperlinks from the page.
+    """
+    data = request.get_json()
+    if not data:
+        print('ERROR: No data provided. Please provide a url in the body of the request.')
+        return jsonify({'error': 'No data provided'}), 400
+    url = data.get('url', '')
+    if not url:
+        print('ERROR: No url provided. Please provide a url in the body of the request.')
+        return jsonify({'error': 'No url provided'}), 400
     html_content = fetch_html_from_url(url)
     text_content = html_to_text(html_content)
     hyperlinks = extract_hyperlinks(html_content)
     if text_content:
+        print(f"Content of page returned. Sublinks of length {len(hyperlinks)} also returned")
         return jsonify({'contentOfPage': text_content, 'hyperlinksFromPage': hyperlinks}), 200
     else:
+        print(f"ERROR: No content found for url {url}")
         return jsonify({'error': 'No content found for url'}), 404
 
 if __name__ == '__main__':
