@@ -22,6 +22,19 @@ class FunctionCall(BaseModel):
         check_results_before_next: Boolean indicating if the results of the function call should be checked before calling the next function.
         """
 
+class SingleFunctionSelectorResponse(BaseModel):
+    function: FunctionCall
+    enough: bool
+
+    @classmethod
+    def get_description(cls) -> str:
+        return f"""
+        function: FunctionCall instance for what function to call.
+        enough: Boolean indicating if the data gathering is complete.
+        Structure of SingleFunctionSelectorResponse instance:
+        {FunctionCall.get_description()}
+        """
+
 # Response format for Function Selector
 class IdentifiedIntent(BaseModel):
     functions: list[FunctionCall]
