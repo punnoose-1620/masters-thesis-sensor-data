@@ -283,7 +283,7 @@ def getUrlToVersion(version_number):
 def getUrlContent(url):
     html_content = fetch_html_from_url(url)
     text_content = html_to_text(html_content)
-    hyperlinks = extract_hyperlinks(html_content)
+    hyperlinks = extract_hyperlinks(html_content, url)
     if text_content:
         return jsonify({'contentOfPage': text_content, 'hyperlinksFromPage': hyperlinks}), 200
     else:
