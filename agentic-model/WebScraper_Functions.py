@@ -247,7 +247,14 @@ class WebScraper_Functions(BaseModel):
             return None
 
     def get_latest_homepage(self):
-        latest_version = self.get_latest_version()
+        latest_version_url = self.get_latest_version()
+        html_content = self.fetch_html_from_url(latest_version_url)
+        text_content = self.html_to_text(html_content)
+        hyperlinks = self.extract_hyperlinks(html_content, latest_version_url)
+        if text_content:
+            return {'contentOfPage': text_content, 'hyperlinksFromPage': hyperlinks, 'page_url': latest_version_url}
+        else:
+            return {'error': 'No content found for url'}
 
     def get_url_to_version(self,version_number:str):
         """

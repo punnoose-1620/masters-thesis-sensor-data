@@ -6,7 +6,7 @@ from tqdm import tqdm
 from flask_cors import CORS
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 # Flask App
 app = Flask(__name__)
@@ -279,8 +279,14 @@ def getUrlToVersion(version_number):
     else:
         return jsonify({'error': 'No url found for version number'}), 404
 
-@app.route('/get_url_content/<url>')
-def getUrlContent(url):
+@app.route('/get_url_content', methods=['POST'])
+def getUrlContent():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    url = data.get('url', '')
+    if not url:
+        return jsonify({'error': 'No url provided'}), 400
     html_content = fetch_html_from_url(url)
     text_content = html_to_text(html_content)
     hyperlinks = extract_hyperlinks(html_content, url)
