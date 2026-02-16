@@ -1,0 +1,28 @@
+When to use each
+✅ Use Microsoft Copilot if:
+
+You only want an AI assistant inside Word/Teams/Outlook
+
+You don’t want to build or deploy your own chatbot
+
+You want ready-made features (summarize meetings, write emails, etc.)
+
+Copilot is mainly for personal productivity, not for creating custom stakeholder chatbots.
+
+✅ Use Azure AI + Azure OpenAI if:
+
+You want a chatbot for your company/stakeholders
+
+You want it to answer based on your organization’s documents
+
+You want full control (UI, access, logging, security)
+
+You want to deploy it as a website/app/Teams bot
+
+
+Biggest Difference (Simple)
+...........................
+
+Tool	                           What it is	                                       Best for
+Azure AI	                 Full developer platform	                Custom AI apps (advanced)
+Copilot Studio	                 Low-code chatbot builder	                Quick Teams chatbots
