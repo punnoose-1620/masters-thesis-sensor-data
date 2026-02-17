@@ -1,3 +1,7 @@
+# Files containing Confidential Data
+*.csv
+agentic-model/SharepointSnapshot/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
