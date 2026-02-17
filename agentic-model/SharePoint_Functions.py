@@ -8,13 +8,6 @@ Required Authentication Parameters :
 - Tenant ID
 - Client ID
 - Client Secret (or Certificate)
-
-Required Libraries
-- msal
-- requests
-- python-dotenv
-
-
 """
 
 # auth.py
@@ -109,6 +102,70 @@ def list_drive_root_items(drive_id):
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     return response.json()["value"]
+
+# Recursively lists all file items in a drive (or under a folder).
+def list_all_drive_files(drive_id, folder_item_id="root"):
+    """
+    Recursively lists all file items in a drive (or under a folder).
+    Arguments:
+        drive_id (str): The ID of the drive.
+        folder_item_id (str): The folder item ID, or "root" for drive root.
+    Returns (Response):
+        A flat list of all file items (folders are walked, not included as items).
+    """
+    token = get_access_token()
+    if folder_item_id == "root":
+        url = f"{GRAPH_BASE}/drives/{drive_id}/root/children"
+    else:
+        url = f"{GRAPH_BASE}/drives/{drive_id}/items/{folder_item_id}/children"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    items = response.json()["value"]
+    files = []
+    for item in items:
+        if "folder" in item:
+            files.extend(list_all_drive_files(drive_id, item["id"]))
+        else:
+            files.append(item)
+    return files
+
+# Gets a single drive item (file or folder) by id.
+def get_drive_item(drive_id, item_id):
+    """
+    Gets a single drive item (file or folder) by id.
+    Arguments:
+        drive_id (str): The ID of the drive.
+        item_id (str): The ID of the item.
+    Returns (Response):
+        The drive item metadata (name, size, id, etc.).
+    """
+    token = get_access_token()
+    url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+# Gets the raw content (bytes) of a drive item (file).
+def get_drive_item_content(drive_id, item_id):
+    """
+    Gets the raw content (bytes) of a drive item (file).
+    Arguments:
+        drive_id (str): The ID of the drive.
+        item_id (str): The ID of the file item.
+    Returns (Response):
+        The file content as bytes.
+    """
+    token = get_access_token()
+    url = f"{GRAPH_BASE}/drives/{drive_id}/items/{item_id}/content"
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.content
 
 # Flow to use for endpoint : 
 # 1. Resolve site
