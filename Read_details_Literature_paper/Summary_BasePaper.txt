@@ -1,0 +1,82 @@
+*** Notes : This files describes the summary of the paper "Simple_Action_Model_Enabling_LLM_to_Sequential_Function_Calling_Tool_Chain "
+
+IEEE Published ** Conference paper ** Held Thrissur , kerala ***  keywords: function calling, LLM
+
+
+This paper involves the conceptual comparison of the LLM + Open source function calling tool
+This paper looks at different LLM+ function calling system and explain what it can do and what it canot do. It compares the feature capabilities and limitations.
+The paper proposes a new improved methods . The author introduce simple action model.
+
+
+Methodology :
+
+take user question  -->  LLM creates a plan (return json form )--->  System executes function step by step
+
+1.  Schema Preparation :  the system fetches openAPI file. turn into small,simple and LLM friendly version used the the tool - OpenAPI-TS and OpenAPI -Zod --> this tool huge openAPI Json into simple TypeScript /Zod Types.
+
+2. Prompt Preparation :  LLM dont understand the open API schema . so that the author designed a strict prompt to force the LLM to produce the correct function name,structure,steps,return json format,correct parameter etc.
+
+3. LLM generate action plan according to the user requirements. The plan returned should be in exact function order.
+
+4.Custom Json Parser ( Validate LLM Output) , The parser checks
+✔ JSON structure is correct
+✔ Function names exist in schema
+✔ Parameter types match (via Zod)
+✔ Special placeholders like $previous_result are interpreted
+✔ No hallucinated keys or missing values
+
+Zod Catches the error -> execution stops.
+
+5. Action Engine Execution : It execute the function in the order of the json which LLM returned.
+
+As per the paper Action Engine finishes everything without asking LLM again
+
+. Schema Preparation          Convert OpenAPI schema into simple types for the LLM
+
+  Prompt Preparation          Teach LLM via examples + rules to output JSON steps
+
+ One‑Shot                      LLM OutputLLM creates complete action plan as JSON
+
+ JSON Parser                   Validate structure & parameters
+
+ Action Engine                 Execute function calls sequentially
+
+ Return  Result                Final answer to user
+
+
+
+
+
+Results:
+
+performance evaluation :
+1. First they evaluated the LLM models based on Rank ,contex window, MMLU, and median tokens. They have done a conceptual analysis . The evaluation of these models are provided by
+ArtificialAnalysis/LLM-Performance-Leaderboard from hugging face.
+face.
+
+2. The paper compares the proposed Action model with the function calling approaches LangChain
+OpenAI Tools API
+Vercel AI SDK
+Cloudflare AI Utils.
+This comparison is conceptual, not experimental — meaning the authors compare capabilities, not performance numbers.
+
+The paper uses a math example as its demonstration.(10+8/2)
+
+The paper focused on the toolchain , not the domain.
+
+The paper doesnot mentioned thenalternative way if the LLM wouldnot return exact json structure.
+
+also handles the token usage also
+
+These comparison are feature level , architectural and conceptual
+
+The paper does not include any experimental analysis. all based on the conceptual.  not includes the proposd model's performance evaluation.
+
+The author proposes that the system can be used for real world application. but this is also conceptual. not experimentally proved.
+
+
+
+
+
+
+
