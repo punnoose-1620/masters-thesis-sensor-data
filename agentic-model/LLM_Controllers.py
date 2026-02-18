@@ -5,12 +5,12 @@ from LLM_Classes import *
 from LLM_Queries import *
 from LLM_Connectors import *
 
-from SharePoint_Functions import *
 from Database_Functions import *
 from WebScraper_Functions import *
 from SharePoint_Snapshop_Functions import *
 
 WikiInstance = WebScraper_Functions()
+
 
 FUNCTION_REGISTRY = {
     'get_wice_wiki_version_map_full': {
@@ -43,9 +43,20 @@ FUNCTION_REGISTRY = {
     },
     'get_latest_wice_wiki_url_content': {
         "function_instance": WikiInstance.get_latest_homepage,
-        "parameter_structure": {
-        },
+        "parameter_structure": {},
         "description": "Get the content of the latest version of the public WICE Wiki Webpage url."
+    },
+    'get_sharepoint_file_descriptions': {
+        "function_instance": SharePoint_Snapshop_Functions.get_file_descriptions,
+        "parameter_structure": {},
+        "description": "Get the list of all files available from SharePoint, along with descriptions of each file."
+    },
+    'read_sharepoint_file': {
+        "function_instance": SharePoint_Snapshop_Functions.read_file_final,
+        "parameter_structure": {
+            "file_path": str
+        },
+        "description": "Read the content of the given file from SharePoint and return the content."
     }
 }      
 # Function Name : {
