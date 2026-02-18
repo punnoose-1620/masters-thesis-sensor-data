@@ -7,9 +7,47 @@ from LLM_Connectors import *
 
 from SharePoint_Functions import *
 from Database_Functions import *
-from WikiEndpoints import *
+from WebScraper_Functions import *
+from SharePoint_Snapshop_Functions import *
 
-FUNCTION_REGISTRY = {}      
+WikiInstance = WebScraper_Functions()
+
+FUNCTION_REGISTRY = {
+    'get_wice_wiki_version_map_full': {
+        "function_instance": WikiInstance.get_version_map_full,
+        "parameter_structure": {
+            "v_type": str
+        },
+        "description": "Get the full map of the public WICE Wiki Webpages."
+    },
+    'check_wice_wiki_version_exists': {
+        "function_instance": WikiInstance.check_version_exists,
+        "parameter_structure": {
+            "version_number": str
+        },
+        "description": "Check if the given version number exists in the WICE Wiki Current Version Map."
+    },
+    'get_wice_wiki_url_to_version': {
+        "function_instance": WikiInstance.get_url_to_version,
+        "parameter_structure": {
+            "version_number": str
+        },
+        "description": "Get the public WICE Wiki Webpage url for the given version number."
+    },
+    'get_wice_wiki_url_content': {
+        "function_instance": WikiInstance.get_version_homepage,
+        "parameter_structure": {
+            'version_number': str
+        },
+        "description": "Get the content of the given version of the public WICE Wiki Webpage url."
+    },
+    'get_latest_wice_wiki_url_content': {
+        "function_instance": WikiInstance.get_latest_homepage,
+        "parameter_structure": {
+        },
+        "description": "Get the content of the latest version of the public WICE Wiki Webpage url."
+    }
+}      
 # Function Name : {
 #     "function_instance": function_instance,
 #     "parameter_structure": { parameter_name: parameter_type },
