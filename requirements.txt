@@ -1,0 +1,32 @@
+# LLM + env
+openai
+pydantic
+python-dotenv
+google-generativeai
+
+# SharePoint (Graph auth)
+msal
+requests
+
+# Wiki scraping / API
+tqdm
+flask
+flask-cors
+beautifulsoup4
+
+# File readers (SharePoint snapshot)
+pypdf
+Pillow
+openpyxl
+pdfplumber
+python-docx
+pytesseract
+
+# Notebooks / ML
+numpy
+pandas
+seaborn
+matplotlib
+tensorflow
+scikit-learn
+sentence-transformers
