@@ -1,6 +1,7 @@
 # Functions to read files from Sharepoint Snapshot
 import os
 import csv
+import json
 import docx
 import pypdf
 import openpyxl
@@ -180,33 +181,43 @@ class SharePoint_Snapshop_Functions(BaseModel):
         return info
 
 # Testing Functions
-# filePaths = SharePoint_Snapshop_Functions.get_architecture()
-# filetypeCount = {}
-# read_stats = {
-#     'SUCCESS': 0,
-#     'FAIL': 0,
-#     'TOTAL': 0
-# }
-# for filePath in filePaths:
-#     extension = filePath.split('.')[-1]
-#     read_success = 'FAIL'
-#     ## Try to read each file
-#     try:
-#         file_content = SharePoint_Snapshop_Functions.read_file_final(filePath)
-#         read_success = 'SUCCESS'
-#     except Exception as e:
-#         print(f"Error reading file '{filePath.split('\\')[-1]}'")
-#         ext = filePath.split('.')[-1]
-#         print(read_success, ' : ', filePath.split('\\')[-1], '\n')
-#     if extension not in filetypeCount:
-#         filetypeCount[extension] = 1
-#     else:
-#         filetypeCount[extension] += 1
-#     read_stats[read_success] += 1
-#     read_stats['TOTAL'] += 1
-# print('\nFiletype Count:')
-# for extension, count in filetypeCount.items():
-#     print(f"{extension}: {count}")
-# print('\nFile Read Statistics:')
-# for status, count in read_stats.items():
-#     print(f"{status}: {count}")
+filePaths = SharePoint_Snapshop_Functions.get_architecture()
+filetypeCount = {}
+read_stats = {
+    'SUCCESS': 0,
+    'FAIL': 0,
+    'TOTAL': 0
+}
+file_path_with_description = {}
+
+for filePath in filePaths:
+    extension = filePath.split('.')[-1]
+    read_success = 'FAIL'
+    ## Try to read each file
+    try:
+        file_content = SharePoint_Snapshop_Functions.read_file_final(filePath)
+        read_success = 'SUCCESS'
+        keyPath = '.'+str(filePath.split('agentic-model')[-1])
+        file_path_with_description[keyPath] = ''
+    except Exception as e:
+        print(f"Error reading file '{filePath.split('\\')[-1]}'")
+        ext = filePath.split('.')[-1]
+        print(read_success, ' : ', filePath.split('\\')[-1], '\n')
+    if extension not in filetypeCount:
+        filetypeCount[extension] = 1
+    else:
+        filetypeCount[extension] += 1
+    read_stats[read_success] += 1
+    read_stats['TOTAL'] += 1
+
+# Write file_path_with_description to a JSON file
+json_output_path = os.path.join(os.path.dirname(__file__), 'sharepoint_file_descriptions.json')
+with open(json_output_path, 'w', encoding='utf-8') as json_file:
+    json.dump(file_path_with_description, json_file, ensure_ascii=False, indent=4)
+
+print('\nFiletype Count:')
+for extension, count in filetypeCount.items():
+    print(f"{extension}: {count}")
+print('\nFile Read Statistics:')
+for status, count in read_stats.items():
+    print(f"{status}: {count}")
