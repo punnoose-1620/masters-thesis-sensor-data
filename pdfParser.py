@@ -10,6 +10,7 @@ import pdfplumber
 BASE_FOLDER = "Literature_Review_Papers/"
 OUTPUT_FILE_PUNNOOSE = "Literature_Review_Papers_Text/punnoose_papers.txt"
 OUTPUT_FILE_DEEPA = "Literature_Review_Papers_Text/deepa_papers.txt"
+OUTPUT_FILE_HALLUCINATION = "Literature_Review_Papers_Text/hallucination_papers.txt"
 
 
 def readPdf(path: str) -> str:
@@ -107,6 +108,7 @@ def parseSubFiles(baseFolder: str) -> None:
     base = Path(baseFolder)
     punnooseTokens = 0
     deepaTokens = 0
+    hallucinationTokens = 0
     if not base.is_dir():
         return
 
@@ -115,7 +117,11 @@ def parseSubFiles(baseFolder: str) -> None:
         folderName = str(pdf_path.parent.name)
         content = readPdf(str(pdf_path))
         txt_path = pdf_path.with_suffix(".txt")
-        if '+' in folderName:
+        if 'hallucination' in folderName:
+            tokenCount = count_tokens(content)
+            hallucinationTokens += tokenCount
+            writeToTxt(OUTPUT_FILE_HALLUCINATION, content, fileName)
+        elif '+' in folderName:
             tokenCount = count_tokens(content)
             punnooseTokens += tokenCount
             writeToTxt(OUTPUT_FILE_PUNNOOSE, content, fileName)
@@ -126,5 +132,6 @@ def parseSubFiles(baseFolder: str) -> None:
 
     print(f"Total tokens for files by Deepa: {deepaTokens}")
     print(f"Total tokens for files by Punnoose: {punnooseTokens}")
+    print(f"Total tokens for files on LLM Hallucination: {hallucinationTokens}")
 
 parseSubFiles(BASE_FOLDER)
