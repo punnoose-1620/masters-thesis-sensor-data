@@ -53,6 +53,7 @@ class WebScraper_Functions(BaseModel):
             'portal': 'https://wice-sysdoc.alkit.se/index.php/WICE_Portal_Release_notes',
             'm2m': 'https://wice-sysdoc.alkit.se/index.php/M2M_release_notes',
         }
+        self.get_version_map_full(v_type='software')
 
     # Controller Functions
     def useUrl_Checker(self, url:str):
@@ -230,6 +231,20 @@ class WebScraper_Functions(BaseModel):
                     continue
         print('Unavailable versions: ', json.dumps(self.UNAVAILABLE_WICE_WIKI_VERSIONS, indent=4))
         return self.WICE_WIKI_VERSIONS
+
+    def get_version_homepage(self, version_number:str):
+        """
+        Fetches the homepage for the given version number.
+        Returns the homepage url.
+        """
+        version_url = self.get_version_map_full(version_number)
+        html_content = self.fetch_html_from_url(version_url)
+        text_content = self.html_to_text(html_content)
+        hyperlinks = self.extract_hyperlinks(html_content, version_url)
+        if text_content:
+            return {'contentOfPage': text_content, 'hyperlinksFromPage': hyperlinks, 'page_url': version_url}
+        else:
+            return {'error': 'No content found for url'}
 
     def get_latest_version(self):
         """
