@@ -1,0 +1,24 @@
+Source : Cornell University Archive
+https://arxiv.org
+
+Query String : "llm + hallucination + length"
+Additional Filters : 
+- Subject : Computer Science (cs)
+- Date : All Dates
+- 200 results per page
+
+Total Papers found : 78
+Selected Papers : 7
+
+URLs for Selected Papers : 
+1. Semantic Uncertainty Quantification of Hallucinations in LLMs: A Quantum Tensor Network Based Method : https://arxiv.org/abs/2601.20026
+2. Scalable and Reliable Evaluation of AI Knowledge Retrieval Systems: RIKER and the Coherent Simulated Universe : https://arxiv.org/abs/2601.08847
+3. Confidence Estimation for LLMs in Multi-turn Interactions : https://arxiv.org/abs/2601.02179
+4. Can LLMs Predict Their Own Failures? Self-Awareness via Internal Circuits : https://arxiv.org/abs/2512.20578
+5. HaluMem: Evaluating Hallucinations in Memory Systems of Agents : https://arxiv.org/abs/2511.03506
+6. The Illusion of Progress: Re-evaluating Hallucination Detection in LLMs : https://arxiv.org/abs/2508.08285
+7. Hallucination is the last thing you need : https://arxiv.org/abs/2306.11520
+
+Selection Process :
+- Title Read
+- Abstract Read
