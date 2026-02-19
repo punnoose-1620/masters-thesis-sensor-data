@@ -255,6 +255,10 @@ def get_url_to_version(version_number:str):
       return None
 
 # Endpoints
+@app.route('/health-check')
+def healthCheck():
+    return jsonify({'status': 'ok'}), 200
+
 @app.route('/get_version_map_full')
 def getVersionMapFull():
     version_maps = get_version_map_full(v_type='software')

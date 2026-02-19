@@ -11,7 +11,6 @@ from SharePoint_Snapshop_Functions import *
 
 WikiInstance = WebScraper_Functions()
 
-
 FUNCTION_REGISTRY = {
     'get_wice_wiki_version_map_full': {
         "function_instance": WikiInstance.get_version_map_full,
