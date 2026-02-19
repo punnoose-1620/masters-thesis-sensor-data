@@ -3,6 +3,7 @@ import os
 import re
 import json
 import requests
+import subprocess
 from tqdm import tqdm
 from flask_cors import CORS
 from bs4 import BeautifulSoup
@@ -262,7 +263,13 @@ def index():
 
 @app.route('/health-check')
 def healthCheck():
-    return jsonify({'status': 'ok'}), 200
+    last_commit_message = "Unable to retrieve commit message"
+    try:
+        result = subprocess.run(['git', 'log', '-1', '--pretty=%B'], capture_output=True, text=True)
+        last_commit_message = result.stdout.strip()
+    except Exception as e:
+        last_commit_message = f"Unable to retrieve commit message: {e}"
+    return jsonify({'status': 'ok', 'last_commit_message': last_commit_message}), 200
 
 @app.route('/get_version_map_full')
 def getVersionMapFull():
