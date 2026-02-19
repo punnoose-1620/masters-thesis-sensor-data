@@ -142,7 +142,7 @@ def extract_hyperlinks(html_content, source_url:str):
     # Get hyperlinks from main page
     for anchor in soup.find_all('a', href=True):
         text = anchor.get_text(strip=True)
-        url = resolve_relative_url(anchor['href'])
+        url = resolve_relative_url(anchor['href'], source_url)
         if useUrl_Checker(url) and useTitle_Checker(text):
             unique_urls.append(url)
             links.append({
@@ -163,7 +163,7 @@ def extract_hyperlinks(html_content, source_url:str):
                 tempSoup = BeautifulSoup(html_content_temp, "html.parser")
                 for anchor in tempSoup.find_all('a', href=True):
                     text = anchor.get_text(strip=True)
-                    temp_url = resolve_relative_url(anchor['href'])
+                    temp_url = resolve_relative_url(anchor['href'], url, source_url)
                     if useUrl_Checker(temp_url) and useTitle_Checker(text):
                         unique_urls.append(temp_url)
                         links.append({
