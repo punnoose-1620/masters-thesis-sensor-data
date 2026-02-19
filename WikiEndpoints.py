@@ -256,6 +256,10 @@ def get_url_to_version(version_number:str):
       return None
 
 # Endpoints
+@app.route('/')
+def index():
+    return jsonify({'message': 'Welcome to the WICE Wiki API. This API is used to resolve version numbers, urls and get contents from the WICE Wiki Pages.'}), 200
+
 @app.route('/health-check')
 def healthCheck():
     return jsonify({'status': 'ok'}), 200
