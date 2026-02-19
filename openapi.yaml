@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: WICE Wiki API
+  description: REST API for WICE wiki version mapping and URL content extraction.
+  version: 1.0.0
+servers:
+  - url: https://wice-support-agent.onrender.com
+    description: Update this to your deployed base URL (e.g. Render)
+paths:
+  /health-check:
+    get:
+      summary: Health check
+      description: Returns service status.
+      operationId: healthCheck
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /get_version_map_full:
+    get:
+      summary: Get full version map
+      description: Returns all WICE wiki versions (version number to URL).
+      operationId: getVersionMapFull
+      responses:
+        '200':
+          description: Version map
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: string
+                example:
+                  "1.0": "https://wiki.alkit.se/wice10/index.php/Main_Page"
+        '404':
+          description: No version maps found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /does_version_exist/{version_number}:
+    get:
+      summary: Check if version exists
+      description: Returns whether the given version number exists in the wiki.
+      operationId: doesVersionExist
+      parameters:
+        - name: version_number
+          in: path
+          required: true
+          description: Version number (e.g. 1.0, 2.5)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Version exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version_exists:
+                    type: boolean
+                    example: true
+        '404':
+          description: Version does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version_exists:
+                    type: boolean
+                    example: false
+  /get_url_to_version/{version_number}:
+    get:
+      summary: Get URL for version
+      description: Returns the wiki URL for the given version number.
+      operationId: getUrlToVersion
+      parameters:
+        - name: version_number
+          in: path
+          required: true
+          description: Version number (e.g. 1.0, 2.5)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: URL for the version
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+                    format: uri
+        '404':
+          description: No URL found for version
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /get_url_content:
+    post:
+      summary: Get URL content and hyperlinks
+      description: Fetches a URL and returns plain text content and extracted hyperlinks.
+      operationId: getUrlContent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: URL to fetch (e.g. wiki page URL)
+      responses:
+        '200':
+          description: Page content and hyperlinks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contentOfPage:
+                    type: string
+                  hyperlinksFromPage:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        url:
+                          type: string
+                          format: uri
+        '400':
+          description: No data or no url provided
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '404':
+          description: No content found for URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
