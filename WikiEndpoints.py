@@ -38,6 +38,18 @@ URL_STRINGS_TO_DROP = [
     'file:',
     'ftp://',
     'ftps://',
+    'download',
+    ';',
+    '(',
+    ')',
+    '[',
+    ']',
+    '{',
+    '}',
+    '<',
+    '>',
+    '|',
+    '\\'
 ]
 
 TITLES_TO_DROP = [
@@ -74,6 +86,10 @@ def useUrl_Checker(url:str):
     Checks if the URL should be dropped based on the URL strings and URLs to drop.
     Returns False if the URL should be dropped, True otherwise.
     """
+    if url.strip() == '':
+        return False
+    if re.search(r'[A-Za-z0-9_]+:[A-Za-z0-9_]+', url):
+        return False
     for url_string in URL_STRINGS_TO_DROP:
         if url_string in url:
             return False
@@ -116,6 +132,8 @@ def resolve_relative_url(href:str, current:str, base_url:str=None):
     Returns:
         str: The resolved absolute URL (currently returns input unmodified).
     """
+    if re.search(r'[A-Za-z0-9_]+:[A-Za-z0-9_]+', href):
+        return ''
     if not base_url:
         return href
     if 'Main_Page' in href:
@@ -179,12 +197,16 @@ def extract_hyperlinks(html_content, source_url:str):
                                 'url': temp_url
                             })
                 except Exception as e:
-                    print('Error fetching html content of sub page: '+str(e))
-                    unique_urls.remove(url)
-                    links.remove({
-                        'title': get_title_for_url(links, url),
-                        'url': temp_url
-                    })
+                    print('Error fetching html content of sub page (URL: '+url+'): '+str(e))
+                    if url in unique_urls:
+                        unique_urls.remove(url)
+                    if url in parsed_links:
+                        parsed_links.remove(url)
+                    if url in links:
+                        links.remove({
+                            'title': get_title_for_url(links, url),
+                            'url': temp_url
+                        })
     return links
 
 def html_to_text(html_content):
@@ -214,7 +236,17 @@ def fetch_html_from_url(url):
     Raises:
         Exception: If the GET request fails or an HTTP error occurs.
     """
-    response = requests.get(url)
+    response = requests.get(
+        url,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
+    )
     response.raise_for_status()
     return response.text
 
@@ -230,7 +262,8 @@ def get_version_map_full(v_type:str='software'):
         # get all cards using the tag <pre>
         version_numbers = []
         pre_cards = release_history_soup.find_all('pre')
-        for pre_card in tqdm(pre_cards, desc='\nExtracting version numbers from software release history'):
+        print(' ')
+        for pre_card in tqdm(pre_cards, desc='Extracting version numbers from software release history'):
             # Extract version number from the pre_card's text.
             version_match = re.search(r'Version\s*([\d\.]+)', pre_card.text)
             if version_match:
