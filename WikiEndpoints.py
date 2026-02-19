@@ -1,4 +1,5 @@
 # Imports and Installs
+import os
 import re
 import json
 import requests
@@ -300,4 +301,7 @@ def getUrlContent():
         return jsonify({'error': 'No content found for url'}), 404
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000, host='0.0.0.0')
+    debug = os.getenv('DEBUG', True)
+    port = os.getenv('PORT', 5000)
+    host = os.getenv('HOST', '0.0.0.0')
+    app.run(debug=debug, port=port, host=host, load_dotenv=True)
