@@ -292,9 +292,22 @@ def getUrlContent():
     url = data.get('url', '')
     if not url:
         return jsonify({'error': 'No url provided'}), 400
-    html_content = fetch_html_from_url(url)
-    text_content = html_to_text(html_content)
-    hyperlinks = extract_hyperlinks(html_content, url)
+    
+    try:
+        html_content = fetch_html_from_url(url)
+    except Exception as e:
+        return jsonify({'error': 'Error fetching html content: '+str(e)}), 500
+
+    try:
+        text_content = html_to_text(html_content)
+    except Exception as e:
+        return jsonify({'error': 'Error converting html to text: '+str(e)}), 500
+    
+    try:
+        hyperlinks = extract_hyperlinks(html_content, url)
+    except Exception as e:
+        return jsonify({'error': 'Error extracting hyperlinks: '+str(e)}), 500
+    
     if text_content:
         return jsonify({'contentOfPage': text_content, 'hyperlinksFromPage': hyperlinks}), 200
     else:
