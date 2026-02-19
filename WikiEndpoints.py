@@ -126,6 +126,12 @@ def resolve_relative_url(href:str, current:str, base_url:str=None):
         return urljoin(current, href)
     return urljoin(base_url, href)
 
+def get_title_for_url(links:list, url:str):
+    for link in links:
+        if link['url'] == url:
+            return link['title']
+    return None
+
 def extract_hyperlinks(html_content, source_url:str):
     """
     Extracts all hyperlinks and their associated text from HTML content.
@@ -158,19 +164,27 @@ def extract_hyperlinks(html_content, source_url:str):
                 # Add the url to the parsed links
                 parsed_links.append(url)
                 # Fetch the html content of the sub page
-                html_content_temp = fetch_html_from_url(url)
-                # Parse the html content of the sub page and extract the hyperlinks
-                # Append hyperlinks to unique urls and final list
-                tempSoup = BeautifulSoup(html_content_temp, "html.parser")
-                for anchor in tempSoup.find_all('a', href=True):
-                    text = anchor.get_text(strip=True)
-                    temp_url = resolve_relative_url(href=anchor['href'], current=url, base_url=source_url)
-                    if useUrl_Checker(temp_url) and useTitle_Checker(text):
-                        unique_urls.append(temp_url)
-                        links.append({
-                            'title': text,
-                            'url': temp_url
-                        })
+                try:
+                    html_content_temp = fetch_html_from_url(url)
+                    # Parse the html content of the sub page and extract the hyperlinks
+                    # Append hyperlinks to unique urls and final list
+                    tempSoup = BeautifulSoup(html_content_temp, "html.parser")
+                    for anchor in tempSoup.find_all('a', href=True):
+                        text = anchor.get_text(strip=True)
+                        temp_url = resolve_relative_url(href=anchor['href'], current=url, base_url=source_url)
+                        if useUrl_Checker(temp_url) and useTitle_Checker(text):
+                            unique_urls.append(temp_url)
+                            links.append({
+                                'title': text,
+                                'url': temp_url
+                            })
+                except Exception as e:
+                    print('Error fetching html content of sub page: '+str(e))
+                    unique_urls.remove(url)
+                    links.remove({
+                        'title': get_title_for_url(links, url),
+                        'url': temp_url
+                    })
     return links
 
 def html_to_text(html_content):
