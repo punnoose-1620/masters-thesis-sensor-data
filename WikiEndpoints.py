@@ -215,7 +215,7 @@ def get_version_map_full(v_type:str='software'):
         # get all cards using the tag <pre>
         version_numbers = []
         pre_cards = release_history_soup.find_all('pre')
-        for pre_card in tqdm(pre_cards, desc='Extracting version numbers from software release history'):
+        for pre_card in tqdm(pre_cards, desc='\nExtracting version numbers from software release history'):
             # Extract version number from the pre_card's text.
             version_match = re.search(r'Version\s*([\d\.]+)', pre_card.text)
             if version_match:
