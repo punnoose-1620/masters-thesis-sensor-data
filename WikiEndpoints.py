@@ -13,6 +13,7 @@ from flask import Flask, jsonify, request
 
 # Flask App
 app = Flask(__name__)
+app.config['PROJECT_NAME'] = os.getenv('PROJECT_NAME')
 CORS(app)
 
 request_bot_limit = 0
@@ -131,7 +132,7 @@ def get_version_number_from_url(url:str):
     url_split = url.split('/')
     wice_from_url = url_split[3]
     if wice_from_url.startswith('wice'):
-        return wice_from_url.replace('wice', '')
+        return wice_from_url.replace('wice', '').replace('.', '')
     return None
 
 def add_to_complete_map(url:str, title:str, version_number:str):
@@ -140,6 +141,7 @@ def add_to_complete_map(url:str, title:str, version_number:str):
     Map is used to store all urls verified to exist.
     Map Structure: {'version_number': [{'url': url, 'title': title}]}
     """
+    version_number = version_number.replace('.', '')
     if version_number not in COMPLETE_MAP.keys():
         COMPLETE_MAP[version_number] = [{'url': url, 'title': title}]
     COMPLETE_MAP[version_number].append({'url': url, 'title': title})
@@ -151,6 +153,7 @@ def check_complete_map(url:str, version_number:str):
     - True if the url is in the complete map
     - False if url is not verified to exist
     """
+    version_number = version_number.replace('.', '')
     if version_number in COMPLETE_MAP.keys():
         for item in COMPLETE_MAP[version_number]:
             if item['url'] == url:
@@ -244,17 +247,18 @@ def extract_hyperlinks(html_content, source_url:str, version_number:str):
     for anchor in soup.find_all('a', href=True):
         text = anchor.get_text(strip=True)
         url = resolve_relative_url(href=anchor['href'], current=source_url, base_url=source_url)
-        if useUrl_Checker(url) and useTitle_Checker(text):
+        if useUrl_Checker(url) and useTitle_Checker(text) and (check_complete_map(url, version_number) is False):
             unique_urls.append(url)
+            if version_number is not None:
+                add_to_complete_map(url, text, version_number)
             links.append({
                 'title': text,
                 'url': url
             })
     
-    print('Unique URLs: ')
-    unique_urls = remove_duplicates_from_list(unique_urls)
+    print(f"LOG: Unique URLS : ")
     for url in unique_urls:
-        print(url)
+        print(f"\t{url}")
     # Map all hyperlinks from Subpages
     while len(parsed_links) < len(unique_urls):
         for url in unique_urls:
@@ -265,10 +269,12 @@ def extract_hyperlinks(html_content, source_url:str, version_number:str):
                 parsed_links.append(url)
                 if version_number is not None:
                     if check_complete_map(url, version_number):   # If the url is already verified to exist, skip the checks
-                        links = COMPLETE_MAP[version_number]
+                        links = COMPLETE_MAP[version_number.replace('.', '')]
+                        # print(f"LOG: Found {len(links)} verified urls for version {version_number}")
                         for item in links:
-                            url = item['url']
-                            parsed_links.append(url)
+                            url = item['url'].strip()
+                            if url not in parsed_links:
+                                parsed_links.append(url)
                 # Fetch the html content of the sub page
                 try:
                     html_content_temp = fetch_html_from_url(url)
@@ -276,18 +282,18 @@ def extract_hyperlinks(html_content, source_url:str, version_number:str):
                     # Append hyperlinks to unique urls and final list
                     tempSoup = BeautifulSoup(html_content_temp, "html.parser")
                     for anchor in tempSoup.find_all('a', href=True):
-                        text = anchor.get_text(strip=True)
-                        temp_url = resolve_relative_url(href=anchor['href'], current=url, base_url=source_url)
-                        if useUrl_Checker(temp_url) and useTitle_Checker(text) and (temp_url.strip() not in unique_urls) and (temp_url.strip() not in parsed_links):
-                            unique_urls.append(temp_url.strip())
+                        text = anchor.get_text(strip=True).strip()
+                        temp_url = resolve_relative_url(href=anchor['href'], current=url, base_url=source_url).strip()
+                        if useUrl_Checker(temp_url) and useTitle_Checker(text) and (temp_url not in unique_urls) and (temp_url not in parsed_links):
+                            unique_urls.append(temp_url)
                             if version_number is not None:
-                                add_to_complete_map(temp_url.strip(), text.strip(), version_number)
+                                add_to_complete_map(temp_url, text, version_number)
                             links.append({
-                                'title': text.strip(),
-                                'url': temp_url.strip()
+                                'title': text,
+                                'url': temp_url
                             })
                 except Exception as e:
-                    print('\nError fetching html content of sub page (URL: '+url+'): '+str(e))
+                    print('\nERROR: Fetching html content of sub page (URL: '+url+'): '+str(e))
                     if url in unique_urls:
                         unique_urls.remove(url)
                     if url in parsed_links:
@@ -298,13 +304,15 @@ def extract_hyperlinks(html_content, source_url:str, version_number:str):
                             'url': temp_url
                         })
                     if 'too many requests' in str(e).lower():
-                        print('\n\nBot Limit Reached for Wiki Requests: ', request_bot_limit)
+                        print('\n\nWARNING: Bot Limit Reached for Wiki Requests: ', request_bot_limit)
                         bot_limit_reached = True
                         links = remove_duplicates_from_list_of_dicts(links)
+                        print(f"310 : LOG: Links after removing duplicates: {len(links)}")
                         return links
 
             unique_urls = remove_duplicates_from_list(unique_urls)
             links = remove_duplicates_from_list_of_dicts(links)
+            print(f"315 : LOG: Links after removing duplicates: {len(links)}")
     return links
 
 def html_to_text(html_content):
@@ -367,7 +375,7 @@ def get_version_map_full(v_type:str='software'):
         version_numbers = []
         pre_cards = release_history_soup.find_all('pre')
         print(' ')
-        for pre_card in tqdm(pre_cards, desc='Extracting version numbers from software release history'):
+        for pre_card in tqdm(pre_cards, desc='PROGRESS: Extracting version numbers from software release history'):
             # Extract version number from the pre_card's text.
             version_match = re.search(r'Version\s*([\d\.]+)', pre_card.text)
             if version_match:
@@ -394,8 +402,8 @@ def get_version_map_full(v_type:str='software'):
                 # If not found, skip this card
                 continue
     # TODO: Decide what to do for other Base Urls
-    print('\nUnavailable versions: ', json.dumps(UNAVAILABLE_WICE_WIKI_VERSIONS, indent=4))
-    print('\nAvailable versions: ', json.dumps(WICE_WIKI_VERSIONS, indent=4))
+    print('\nLOG: Unavailable versions: ', json.dumps(UNAVAILABLE_WICE_WIKI_VERSIONS, indent=4))
+    print('\nLOG: Available versions: ', json.dumps(WICE_WIKI_VERSIONS, indent=4))
     return WICE_WIKI_VERSIONS
 
 def get_url_to_version(version_number:str):
@@ -468,6 +476,9 @@ def getUrlContent():
 
     version_number = get_version_number_from_url(url)
 
+    print('\nLOG: Available Versions: ', COMPLETE_MAP.keys())
+    print(f"LOG: Available URLs for {version_number}: {len(COMPLETE_MAP[version_number])}")
+
     try:
         html_content = fetch_html_from_url(url)
     except Exception as e:
@@ -486,10 +497,13 @@ def getUrlContent():
     end_time = time.time()
     execution_time = end_time - start_time
 
-    print('\n\nDuplicates removed by URL: '+str(duplicate_urls))
-    print('Duplicates removed by Titles: '+str(duplicate_titles))
-    print('Version number: ',version_number)
-    print('Total SubUrls Found: ',len(hyperlinks))
+    if len(hyperlinks) == 0 and version_number.replace('.', '') in COMPLETE_MAP.keys():
+        hyperlinks = COMPLETE_MAP[version_number.replace('.', '')]
+
+    print('\n\nLOG: Duplicates removed by URL: '+str(duplicate_urls))
+    print('LOG: Duplicates removed by Titles: '+str(duplicate_titles))
+    print('LOG: Version number: ',version_number)
+    print('LOG: Total SubUrls Found: ',len(hyperlinks))
 
     if text_content:
         returnValue = {
@@ -506,9 +520,19 @@ def getUrlContent():
 
 # Populate the version map when instance is started
 get_version_map_full(v_type='software')
+for version in WICE_WIKI_VERSIONS.keys():
+    url = WICE_WIKI_VERSIONS[version]
+    print('LOG: Mapping Version: ', version)
+    
+    init_links = extract_hyperlinks(fetch_html_from_url(url), url, version)
+    if len(init_links) > 0:
+        COMPLETE_MAP[version.replace('.', '')] = init_links
+    print('After Initial Mapping: ')
+    for key in COMPLETE_MAP.keys():
+        print(f"\t{key}: {len(COMPLETE_MAP[key])}")
 
 if __name__ == '__main__':
-    debug = os.getenv('DEBUG', True)
+    debug = os.getenv('DEBUG', False)
     port = os.getenv('PORT', 5000)
     host = os.getenv('HOST', '0.0.0.0')
     app.run(debug=debug, port=port, host=host, load_dotenv=True)
