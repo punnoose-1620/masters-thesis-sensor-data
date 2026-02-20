@@ -2,6 +2,7 @@
 import os
 import re
 import json
+import time
 import requests
 import subprocess
 from tqdm import tqdm
@@ -13,6 +14,11 @@ from flask import Flask, jsonify, request
 # Flask App
 app = Flask(__name__)
 CORS(app)
+
+request_bot_limit = 0
+bot_limit_reached = False
+duplicate_urls = 0
+duplicate_titles = 0
 
 # Constants
 URLs_TO_DROP = [
@@ -66,7 +72,18 @@ TITLES_TO_DROP = [
     'administrator',
     'random page',
     'view source',
-    'the portal administrator view'
+    'the portal administrator view',
+    'https://',
+    'http://',
+    'mailto:',
+    'tel:',
+    'file:',
+    'ftp://',
+    'ftps://',
+    'download',
+    ';',
+    '(',
+    ')',
 ]
 
 WIKI_BASE_URL = "https://wiki.alkit.se/<VERSION_NUMBER>/index.php/Main_Page"
@@ -79,8 +96,67 @@ RELEASE_HISTORIES = {
 
 WICE_WIKI_VERSIONS = {}              # {'version_number': 'url'}
 UNAVAILABLE_WICE_WIKI_VERSIONS = {}  # {'version_number': 'url'}
+COMPLETE_MAP = {}                     # {'version_number': [{'url': url, 'title': title}]}  --> List of Verified URLs for the given version number
 
 # Controller Functions
+def remove_duplicates_from_list(list:list):
+    for item in list:
+        itemIndex = list.index(item)
+        for item2 in list[itemIndex+1:]:
+            if item == item2:
+                list.remove(item2)
+    return list
+
+def remove_duplicates_from_list_of_dicts(list:list):
+    before_length = len(list)
+    for item in list:
+        itemIndex = list.index(item)
+        for item2 in list[itemIndex+1:]:
+            if item['url'] == item2['url']:
+                list.remove(item2)
+    after_url_length = len(list)
+    global duplicate_urls
+    duplicate_urls += before_length-after_url_length
+    for item in list:
+        itemIndex = list.index(item)
+        for item2 in list[itemIndex+1:]:
+            if item['title'] == item2['title']:
+                list.remove(item2)
+    after_title_length = len(list)
+    global duplicate_titles
+    duplicate_titles += before_length-after_title_length
+    return list
+
+def get_version_number_from_url(url:str):
+    url_split = url.split('/')
+    wice_from_url = url_split[3]
+    if wice_from_url.startswith('wice'):
+        return wice_from_url.replace('wice', '')
+    return None
+
+def add_to_complete_map(url:str, title:str, version_number:str):
+    """
+    Adds the url to the complete map for the given version number.
+    Map is used to store all urls verified to exist.
+    Map Structure: {'version_number': [{'url': url, 'title': title}]}
+    """
+    if version_number not in COMPLETE_MAP.keys():
+        COMPLETE_MAP[version_number] = [{'url': url, 'title': title}]
+    COMPLETE_MAP[version_number].append({'url': url, 'title': title})
+
+def check_complete_map(url:str, version_number:str):
+    """
+    Checks if the url is already in the complete map for the given version number. This map contains all urls verified to exist.
+    Returns :
+    - True if the url is in the complete map
+    - False if url is not verified to exist
+    """
+    if version_number in COMPLETE_MAP.keys():
+        for item in COMPLETE_MAP[version_number]:
+            if item['url'] == url:
+                return True
+    return False
+
 def useUrl_Checker(url:str):
     """
     Checks if the URL should be dropped based on the URL strings and URLs to drop.
@@ -104,7 +180,7 @@ def useTitle_Checker(title:str):
     Returns False if the title should be dropped, True otherwise.
     """
     for title_to_drop in TITLES_TO_DROP:
-        if title.strip() == title_to_drop.strip():
+        if title.strip().lower() == title_to_drop.strip().lower():
             return False
     return True
 
@@ -150,7 +226,7 @@ def get_title_for_url(links:list, url:str):
             return link['title']
     return None
 
-def extract_hyperlinks(html_content, source_url:str):
+def extract_hyperlinks(html_content, source_url:str, version_number:str):
     """
     Extracts all hyperlinks and their associated text from HTML content.
 
@@ -174,13 +250,25 @@ def extract_hyperlinks(html_content, source_url:str):
                 'title': text,
                 'url': url
             })
+    
+    print('Unique URLs: ')
+    unique_urls = remove_duplicates_from_list(unique_urls)
+    for url in unique_urls:
+        print(url)
     # Map all hyperlinks from Subpages
     while len(parsed_links) < len(unique_urls):
         for url in unique_urls:
+            url = url.strip()
             # Check if the url has already been parsed
             if url not in parsed_links:
                 # Add the url to the parsed links
                 parsed_links.append(url)
+                if version_number is not None:
+                    if check_complete_map(url, version_number):   # If the url is already verified to exist, skip the checks
+                        links = COMPLETE_MAP[version_number]
+                        for item in links:
+                            url = item['url']
+                            parsed_links.append(url)
                 # Fetch the html content of the sub page
                 try:
                     html_content_temp = fetch_html_from_url(url)
@@ -190,14 +278,16 @@ def extract_hyperlinks(html_content, source_url:str):
                     for anchor in tempSoup.find_all('a', href=True):
                         text = anchor.get_text(strip=True)
                         temp_url = resolve_relative_url(href=anchor['href'], current=url, base_url=source_url)
-                        if useUrl_Checker(temp_url) and useTitle_Checker(text):
-                            unique_urls.append(temp_url)
+                        if useUrl_Checker(temp_url) and useTitle_Checker(text) and (temp_url.strip() not in unique_urls) and (temp_url.strip() not in parsed_links):
+                            unique_urls.append(temp_url.strip())
+                            if version_number is not None:
+                                add_to_complete_map(temp_url.strip(), text.strip(), version_number)
                             links.append({
-                                'title': text,
-                                'url': temp_url
+                                'title': text.strip(),
+                                'url': temp_url.strip()
                             })
                 except Exception as e:
-                    print('Error fetching html content of sub page (URL: '+url+'): '+str(e))
+                    print('\nError fetching html content of sub page (URL: '+url+'): '+str(e))
                     if url in unique_urls:
                         unique_urls.remove(url)
                     if url in parsed_links:
@@ -207,6 +297,14 @@ def extract_hyperlinks(html_content, source_url:str):
                             'title': get_title_for_url(links, url),
                             'url': temp_url
                         })
+                    if 'too many requests' in str(e).lower():
+                        print('\n\nBot Limit Reached for Wiki Requests: ', request_bot_limit)
+                        bot_limit_reached = True
+                        links = remove_duplicates_from_list_of_dicts(links)
+                        return links
+
+            unique_urls = remove_duplicates_from_list(unique_urls)
+            links = remove_duplicates_from_list_of_dicts(links)
     return links
 
 def html_to_text(html_content):
@@ -248,6 +346,12 @@ def fetch_html_from_url(url):
         }
     )
     response.raise_for_status()
+    # If the response content does not include the bot limit, append it at the end
+    global request_bot_limit
+    response_text = response.text
+    if "too many requests" not in response_text.lower():
+        request_bot_limit += 1
+
     return response.text
 
 def get_version_map_full(v_type:str='software'):
@@ -290,7 +394,8 @@ def get_version_map_full(v_type:str='software'):
                 # If not found, skip this card
                 continue
     # TODO: Decide what to do for other Base Urls
-    print('Unavailable versions: ', json.dumps(UNAVAILABLE_WICE_WIKI_VERSIONS, indent=4))
+    print('\nUnavailable versions: ', json.dumps(UNAVAILABLE_WICE_WIKI_VERSIONS, indent=4))
+    print('\nAvailable versions: ', json.dumps(WICE_WIKI_VERSIONS, indent=4))
     return WICE_WIKI_VERSIONS
 
 def get_url_to_version(version_number:str):
@@ -351,6 +456,18 @@ def getUrlContent():
     if not url:
         return jsonify({'error': 'No url provided'}), 400
     
+    global bot_limit_reached
+    global request_bot_limit
+    global duplicate_urls
+    global duplicate_titles
+    bot_limit_reached = False
+    request_bot_limit = 0
+    duplicate_urls = 0
+    duplicate_titles = 0
+    start_time = time.time()
+
+    version_number = get_version_number_from_url(url)
+
     try:
         html_content = fetch_html_from_url(url)
     except Exception as e:
@@ -362,14 +479,33 @@ def getUrlContent():
         return jsonify({'error': 'Error converting html to text: '+str(e)}), 500
     
     try:
-        hyperlinks = extract_hyperlinks(html_content, url)
+        hyperlinks = extract_hyperlinks(html_content, url, version_number)
     except Exception as e:
         return jsonify({'error': 'Error extracting hyperlinks: '+str(e)}), 500
     
+    end_time = time.time()
+    execution_time = end_time - start_time
+
+    print('\n\nDuplicates removed by URL: '+str(duplicate_urls))
+    print('Duplicates removed by Titles: '+str(duplicate_titles))
+    print('Version number: ',version_number)
+    print('Total SubUrls Found: ',len(hyperlinks))
+
     if text_content:
-        return jsonify({'contentOfPage': text_content, 'hyperlinksFromPage': hyperlinks}), 200
+        returnValue = {
+            'contentOfPage': text_content, 
+            'hyperlinksFromPage': hyperlinks,
+            'execution_time': execution_time
+            }
+        if bot_limit_reached:
+            returnValue['bot_limit_reached'] = bot_limit_reached
+            returnValue['request_bot_limit'] = request_bot_limit
+        return jsonify(returnValue), 200
     else:
         return jsonify({'error': 'No content found for url'}), 404
+
+# Populate the version map when instance is started
+get_version_map_full(v_type='software')
 
 if __name__ == '__main__':
     debug = os.getenv('DEBUG', True)
