@@ -187,6 +187,28 @@ def useTitle_Checker(title:str):
             return False
     return True
 
+def remove_invalid_urls_from_list(list:list):
+    """
+    Removes invalid urls from the list.
+    Returns the list with invalid urls removed.
+    """
+    for item in list:
+        if not useUrl_Checker(item):
+            list.remove(item)
+    return list
+
+def remove_invalid_entries_from_list(list:list):
+    """
+    Removes invalid entries from the list.
+    Returns the list with invalid entries removed.
+    """
+    for entry in list:
+        url = entry['url']
+        title = entry['title']
+        if not useUrl_Checker(url) or not useTitle_Checker(title):
+            list.remove(entry)
+    return list
+
 def check_url_exists(url:str):
     """
     Checks if the url exists by making a HEAD request.
@@ -229,90 +251,95 @@ def get_title_for_url(links:list, url:str):
             return link['title']
     return None
 
-def extract_hyperlinks(html_content, source_url:str, version_number:str):
+def extract_hyperlinks_with_map(html_content, source_url:str, version_number:str):
     """
-    Extracts all hyperlinks and their associated text from HTML content.
-
-    Args:
-        html_content (str): HTML string to parse.
-
-    Returns:
-        list: A list of dicts each containing 'title' (the link text) and 'url' (the link href).
+    Extracts all hyperlinks and their associated text from HTML content using the complete map.
     """
     soup = BeautifulSoup(html_content, "html.parser")
     links = []
+    new_links = []
     unique_urls = [source_url]
     parsed_links = [source_url]
-    # Get hyperlinks from main page
+
+    # If urls already exist in complete map, load them first
+    version_number = version_number.replace('.', '')
+    if version_number in COMPLETE_MAP.keys():
+        links = COMPLETE_MAP[version_number]
+        for link in links:
+            url = link['url'].strip()
+            unique_urls.append(url)
+            parsed_links.append(url)
+
+    # Now check for any new URLs in the html page contents
     for anchor in soup.find_all('a', href=True):
         text = anchor.get_text(strip=True)
-        url = resolve_relative_url(href=anchor['href'], current=source_url, base_url=source_url)
-        if useUrl_Checker(url) and useTitle_Checker(text) and (check_complete_map(url, version_number) is False):
+        url = resolve_relative_url(href=anchor['href'], current=source_url, base_url=source_url).strip()
+        if useUrl_Checker(url) and useTitle_Checker(text) and (url not in unique_urls) and (url not in parsed_links):
             unique_urls.append(url)
-            if version_number is not None:
-                add_to_complete_map(url, text, version_number)
+            new_links.append(url)
+            new_links = remove_duplicates_from_list(new_links)
             links.append({
                 'title': text,
                 'url': url
             })
-    
-    print(f"LOG: Unique URLS : ")
-    for url in unique_urls:
-        print(f"\t{url}")
-    # Map all hyperlinks from Subpages
-    while len(parsed_links) < len(unique_urls):
-        for url in unique_urls:
-            url = url.strip()
-            # Check if the url has already been parsed
-            if url not in parsed_links:
-                # Add the url to the parsed links
-                parsed_links.append(url)
-                if version_number is not None:
-                    if check_complete_map(url, version_number):   # If the url is already verified to exist, skip the checks
-                        links = COMPLETE_MAP[version_number.replace('.', '')]
-                        # print(f"LOG: Found {len(links)} verified urls for version {version_number}")
-                        for item in links:
-                            url = item['url'].strip()
-                            if url not in parsed_links:
-                                parsed_links.append(url)
-                # Fetch the html content of the sub page
-                try:
-                    html_content_temp = fetch_html_from_url(url)
-                    # Parse the html content of the sub page and extract the hyperlinks
-                    # Append hyperlinks to unique urls and final list
-                    tempSoup = BeautifulSoup(html_content_temp, "html.parser")
-                    for anchor in tempSoup.find_all('a', href=True):
-                        text = anchor.get_text(strip=True).strip()
-                        temp_url = resolve_relative_url(href=anchor['href'], current=url, base_url=source_url).strip()
-                        if useUrl_Checker(temp_url) and useTitle_Checker(text) and (temp_url not in unique_urls) and (temp_url not in parsed_links):
-                            unique_urls.append(temp_url)
-                            if version_number is not None:
-                                add_to_complete_map(temp_url, text, version_number)
-                            links.append({
-                                'title': text,
-                                'url': temp_url
-                            })
-                except Exception as e:
-                    print('\nERROR: Fetching html content of sub page (URL: '+url+'): '+str(e))
-                    if url in unique_urls:
-                        unique_urls.remove(url)
-                    if url in parsed_links:
-                        parsed_links.remove(url)
-                    if url in links:
-                        links.remove({
-                            'title': get_title_for_url(links, url),
+            links = remove_invalid_entries_from_list(links)
+            new_links = remove_invalid_urls_from_list(new_links)
+
+    print(f"LOG: Newly Found Urls : {len(new_links)}")
+
+    # Map all new HyperLinks
+    for url in tqdm(new_links, desc='PROGRESS: Mapping new HyperLinks for version '+version_number):
+        if url not in parsed_links:
+            parsed_links.append(url)
+            try:
+                parser = 'xml' if '.xml' in url else 'html.parser'
+                html_content_temp = fetch_html_from_url(url)                    # Fetch the html content of the sub page
+                content_stripped = html_content_temp.lstrip()
+                if content_stripped.startswith('<?xml'):
+                    parser = 'xml'
+                if (len(content_stripped) > 100) and ('<?xml' in content_stripped):
+                    parser = 'xml'
+                else:
+                    parser = 'html.parser'
+                tempSoup = BeautifulSoup(html_content_temp, parser)     # Parse the html content of the sub page
+                # Check for any new HyperLinks in the sub page  
+                for anchor in tempSoup.find_all('a', href=True):
+                    text = anchor.get_text(strip=True).strip()
+                    temp_url = resolve_relative_url(href=anchor['href'], current=url, base_url=source_url).strip()
+                    # If the url is valid, add it to the complete map
+                    if version_number is not None:
+                        add_to_complete_map(temp_url, text, version_number)
+                    # If the url is valid, add it to the links list
+                    if useUrl_Checker(temp_url) and useTitle_Checker(text) and (temp_url not in unique_urls) and (temp_url not in parsed_links) and (temp_url not in new_links):
+                        unique_urls.append(temp_url)
+                        new_links.append(temp_url)
+                        new_links = remove_duplicates_from_list(new_links)
+                        links.append({
+                            'title': text,
                             'url': temp_url
                         })
-                    if 'too many requests' in str(e).lower():
-                        print('\n\nWARNING: Bot Limit Reached for Wiki Requests: ', request_bot_limit)
-                        bot_limit_reached = True
-                        links = remove_duplicates_from_list_of_dicts(links)
-                        print(f"310 : LOG: Links after removing duplicates: {len(links)}")
-                        return links
-
-            unique_urls = remove_duplicates_from_list(unique_urls)
-            links = remove_duplicates_from_list_of_dicts(links)
-            print(f"315 : LOG: Links after removing duplicates: {len(links)}")
+                        links = remove_invalid_entries_from_list(links)
+                        new_links = remove_invalid_urls_from_list(new_links)
+            except Exception as e:
+                if 'too many requests' in str(e).lower():
+                    bot_limit_reached = True
+                    # Remove duplicates from the links list
+                    links = remove_duplicates_from_list_of_dicts(links)
+                    # Replace the complete map with the new links
+                    if version_number is not None:
+                        COMPLETE_MAP[version_number] = links
+                    return links
+                print(f"ERROR: Fetching html content of sub page (URL: {url}): {e}")
+                if url in new_links:
+                    new_links.remove(url)
+                    new_links = remove_duplicates_from_list(new_links)
+                    links = remove_invalid_entries_from_list(links)
+                    new_links = remove_invalid_urls_from_list(new_links)
+    # Remove duplicates from the links list
+    links = remove_duplicates_from_list_of_dicts(links)
+    # Replace the complete map with the new links
+    if version_number is not None:
+        COMPLETE_MAP[version_number] = links
     return links
 
 def html_to_text(html_content):
@@ -416,6 +443,27 @@ def get_url_to_version(version_number:str):
     else:
       return None
 
+def init():
+    """
+    Initializes the complete map by mapping all the versions and their hyperlinks.
+    """
+    init_start_time = time.time()
+    get_version_map_full(v_type='software')
+    for version in WICE_WIKI_VERSIONS.keys():
+        url = WICE_WIKI_VERSIONS[version]
+        print('LOG: Mapping Version: ', version)
+        
+        init_links = extract_hyperlinks_with_map(fetch_html_from_url(url), url, version)
+        if len(init_links) > 0:
+            COMPLETE_MAP[version.replace('.', '')] = init_links
+        print('LOG: After Initial Mapping: ')
+        for key in COMPLETE_MAP.keys():
+            print(f"\t{key}: {len(COMPLETE_MAP[key])}")
+    init_end_time = time.time()
+    init_execution_time = init_end_time - init_start_time
+    minutes, seconds = divmod(init_execution_time, 60)
+    print(f"LOG: Initial Mapping Execution Time: {int(minutes)} min {seconds:.2f} sec")
+
 # Endpoints
 @app.route('/')
 def index():
@@ -490,7 +538,7 @@ def getUrlContent():
         return jsonify({'error': 'Error converting html to text: '+str(e)}), 500
     
     try:
-        hyperlinks = extract_hyperlinks(html_content, url, version_number)
+        hyperlinks = extract_hyperlinks_with_map(html_content, url, version_number)
     except Exception as e:
         return jsonify({'error': 'Error extracting hyperlinks: '+str(e)}), 500
     
@@ -519,17 +567,7 @@ def getUrlContent():
         return jsonify({'error': 'No content found for url'}), 404
 
 # Populate the version map when instance is started
-get_version_map_full(v_type='software')
-for version in WICE_WIKI_VERSIONS.keys():
-    url = WICE_WIKI_VERSIONS[version]
-    print('LOG: Mapping Version: ', version)
-    
-    init_links = extract_hyperlinks(fetch_html_from_url(url), url, version)
-    if len(init_links) > 0:
-        COMPLETE_MAP[version.replace('.', '')] = init_links
-    print('After Initial Mapping: ')
-    for key in COMPLETE_MAP.keys():
-        print(f"\t{key}: {len(COMPLETE_MAP[key])}")
+init()
 
 if __name__ == '__main__':
     debug = os.getenv('DEBUG', False)
