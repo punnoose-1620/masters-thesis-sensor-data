@@ -8,6 +8,7 @@ import subprocess
 from tqdm import tqdm
 from flask_cors import CORS
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from urllib.parse import urljoin
 from flask import Flask, jsonify, request
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -140,6 +141,33 @@ def remove_duplicates_from_list_of_dicts(list:list):
     global duplicate_titles
     duplicate_titles += before_length-after_title_length
     return list
+
+def remove_irrelevant_areas(html_content:str, url:str):
+    """
+    Removes the irrelevant areas from the html content.
+    Returns the html content with the irrelevant areas removed.
+    """
+    for _, wiki_url in WICE_WIKI_VERSIONS.items():
+        if wiki_url.strip('/') in url.strip('/'):
+            is_base_url = True
+            break
+    if is_base_url:
+        return html_content
+    soup = BeautifulSoup(html_content, "html.parser")
+    mw_panel_div = soup.find("div", id="mw_panel")
+    if mw_panel_div:
+        mw_panel_div.decompose()
+        print('LOG: Dropped <div id="mw_panel">')
+    mw_head_div = soup.find("div", id="mw_head")
+    if mw_head_div:
+        mw_head_div.decompose()
+        print('LOG: Dropped <div id="mw_head">')
+    # Remove the <footer> tag from the html_content if present
+    footer_tag = soup.find("footer")
+    if footer_tag:
+        footer_tag.decompose()  
+        print('LOG: Dropped <footer> tag')
+    return str(soup)
 
 def get_version_number_from_url(url:str):
     url_split = url.split('/')
@@ -321,7 +349,7 @@ def extract_hyperlinks_with_map(html_content, source_url:str, version_number:str
             parsed_links.append(url)
             try:
                 parser = 'xml' if '.xml' in url else 'html.parser'
-                html_content_temp = fetch_html_from_url(url)                    # Fetch the html content of the sub page
+                html_content_temp = remove_irrelevant_areas(fetch_html_from_url(url), url)                   # Fetch the html content of the sub page
                 content_stripped = html_content_temp.lstrip()
                 if content_stripped.startswith('<?xml'):
                     parser = 'xml'
@@ -471,6 +499,22 @@ def _init_one_version(version):
     if len(init_links) > 0:
         COMPLETE_MAP[version.replace('.', '')] = init_links
 
+def map_quick_start_hyperlinks():
+    quick_start_versions = []
+    for version, links in COMPLETE_MAP.items():
+        for item in links:
+            url = item.get('url', '')
+            if 'index.php/Quick_Start' in url:
+                quick_start_versions.append((version, url))
+
+    for version, quick_start_url in quick_start_versions:
+        print(f"LOG: Mapping Quick Start hyperlinks for version: {version}, url: {quick_start_url}")
+        hyperlinks = extract_hyperlinks_with_map(fetch_html_from_url(quick_start_url), quick_start_url, version)
+        # Avoid duplicating the initial entry for Quick Start (if already present)
+        existing_urls = set(link['url'] for link in COMPLETE_MAP[version])
+        new_links = [link for link in hyperlinks if link['url'] not in existing_urls]
+        COMPLETE_MAP[version].extend(new_links)
+
 def init():
     """
     Initializes the complete map by mapping all the versions and their hyperlinks.
@@ -483,20 +527,14 @@ def init():
         futures = [executor.submit(_init_one_version, version) for version in WICE_WIKI_VERSIONS.keys()]
         for f in as_completed(futures):
             f.result()  # wait for each; re-raise any exception
+
+    # For each url in COMPLETE_MAP, if url has the sub-string 'index.php/Quick_Start', then map all hyperlinks within it
+    map_quick_start_hyperlinks()
+        
     print('LOG: After Initial Mapping: ')
     for key in COMPLETE_MAP.keys():
         print(f"\t{key}: {len(COMPLETE_MAP[key])}")
 
-    # for version in WICE_WIKI_VERSIONS.keys():
-    #     url = WICE_WIKI_VERSIONS[version]
-    #     print('LOG: Mapping Version: ', version)
-        
-    #     init_links = extract_hyperlinks_with_map(fetch_html_from_url(url), url, version)
-    #     if len(init_links) > 0:
-    #         COMPLETE_MAP[version.replace('.', '')] = init_links
-    #     print('LOG: After Initial Mapping: ')
-    #     for key in COMPLETE_MAP.keys():
-    #         print(f"\t{key}: {len(COMPLETE_MAP[key])}")
     init_end_time = time.time()
     init_execution_time = init_end_time - init_start_time
     minutes, seconds = divmod(init_execution_time, 60)
@@ -561,12 +599,13 @@ def getUrlContent():
     start_time = time.time()
 
     version_number = get_version_number_from_url(url)
-
+    
     print('\nLOG: Available Versions: ', COMPLETE_MAP.keys())
     print(f"LOG: Available URLs for {version_number}: {len(COMPLETE_MAP[version_number])}")
 
     try:
         html_content = fetch_html_from_url(url)
+        html_content = remove_irrelevant_areas(html_content, url)
     except Exception as e:
         return jsonify({'error': 'Error fetching html content: '+str(e)}), 500
 
@@ -608,7 +647,8 @@ def getUrlContent():
 init()
 
 if __name__ == '__main__':
+    load_dotenv()
     debug = os.getenv('DEBUG', False)
     port = os.getenv('PORT', 5000)
     host = os.getenv('HOST', '0.0.0.0')
-    app.run(debug=debug, port=port, host=host, load_dotenv=True)
+    app.run(debug=debug, port=port, host=host)
