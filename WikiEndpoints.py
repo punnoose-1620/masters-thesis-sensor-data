@@ -10,11 +10,24 @@ from flask_cors import CORS
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from flask import Flask, jsonify, request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Flask App
 app = Flask(__name__)
 app.config['PROJECT_NAME'] = os.getenv('PROJECT_NAME')
 CORS(app)
+
+# Session for wiki scraping: reuse connection and default headers
+scraperSession = requests.Session()
+SCRAPER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+}
+scraperSession.headers.update(SCRAPER_HEADERS)
 
 request_bot_limit = 0
 bot_limit_reached = False
@@ -209,16 +222,31 @@ def remove_invalid_entries_from_list(list:list):
             list.remove(entry)
     return list
 
+def renew_scraper_session():
+    """
+    Renews the scraper session.
+    """
+    global scraperSession
+    scraperSession.close()
+    scraperSession = requests.Session()
+    scraperSession.headers.update(SCRAPER_HEADERS)
+    bot_limit_reached = False
+    request_bot_limit = 0
+
 def check_url_exists(url:str):
     """
     Checks if the url exists by making a HEAD request.
     Returns True if the url exists, False otherwise.
     """
-    response = requests.head(url)
+    response = scraperSession.head(url, timeout=10)
     if response.status_code == 200:
         if "Not Found" in response.text:
+            if bot_limit_reached:
+                renew_scraper_session()
             return " Not Found"
         return True
+    if bot_limit_reached:
+        renew_scraper_session()
     return False
 
 def resolve_relative_url(href:str, current:str, base_url:str=None):
@@ -369,23 +397,15 @@ def fetch_html_from_url(url):
     Raises:
         Exception: If the GET request fails or an HTTP error occurs.
     """
-    response = requests.get(
-        url,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-        }
-    )
+    response = scraperSession.get(url, timeout=10)
     response.raise_for_status()
     # If the response content does not include the bot limit, append it at the end
     global request_bot_limit
     response_text = response.text
     if "too many requests" not in response_text.lower():
         request_bot_limit += 1
+    else:
+        renew_scraper_session()
 
     return response.text
 
@@ -443,22 +463,40 @@ def get_url_to_version(version_number:str):
     else:
       return None
 
+def _init_one_version(version):
+    """Worker: fetch and extract hyperlinks for one version, write into COMPLETE_MAP."""
+    url = WICE_WIKI_VERSIONS[version]
+    print('LOG: Mapping Version: ', version)
+    init_links = extract_hyperlinks_with_map(fetch_html_from_url(url), url, version)
+    if len(init_links) > 0:
+        COMPLETE_MAP[version.replace('.', '')] = init_links
+
 def init():
     """
     Initializes the complete map by mapping all the versions and their hyperlinks.
     """
     init_start_time = time.time()
     get_version_map_full(v_type='software')
-    for version in WICE_WIKI_VERSIONS.keys():
-        url = WICE_WIKI_VERSIONS[version]
-        print('LOG: Mapping Version: ', version)
+    valid_versions_count = len(WICE_WIKI_VERSIONS.keys())
+
+    with ThreadPoolExecutor(max_workers=valid_versions_count) as executor:
+        futures = [executor.submit(_init_one_version, version) for version in WICE_WIKI_VERSIONS.keys()]
+        for f in as_completed(futures):
+            f.result()  # wait for each; re-raise any exception
+    print('LOG: After Initial Mapping: ')
+    for key in COMPLETE_MAP.keys():
+        print(f"\t{key}: {len(COMPLETE_MAP[key])}")
+
+    # for version in WICE_WIKI_VERSIONS.keys():
+    #     url = WICE_WIKI_VERSIONS[version]
+    #     print('LOG: Mapping Version: ', version)
         
-        init_links = extract_hyperlinks_with_map(fetch_html_from_url(url), url, version)
-        if len(init_links) > 0:
-            COMPLETE_MAP[version.replace('.', '')] = init_links
-        print('LOG: After Initial Mapping: ')
-        for key in COMPLETE_MAP.keys():
-            print(f"\t{key}: {len(COMPLETE_MAP[key])}")
+    #     init_links = extract_hyperlinks_with_map(fetch_html_from_url(url), url, version)
+    #     if len(init_links) > 0:
+    #         COMPLETE_MAP[version.replace('.', '')] = init_links
+    #     print('LOG: After Initial Mapping: ')
+    #     for key in COMPLETE_MAP.keys():
+    #         print(f"\t{key}: {len(COMPLETE_MAP[key])}")
     init_end_time = time.time()
     init_execution_time = init_end_time - init_start_time
     minutes, seconds = divmod(init_execution_time, 60)
