@@ -7,6 +7,22 @@ servers:
   - url: https://wice-support-agent.onrender.com
     description: Update this to your deployed base URL (e.g. Render)
 paths:
+  /:
+    get:
+      summary: API root
+      description: Welcome message and short API description.
+      operationId: index
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Welcome to the WICE Wiki API. This API is used to resolve version numbers, urls and get contents from the WICE Wiki Pages.
   /health-check:
     get:
       summary: Health check
@@ -23,6 +39,9 @@ paths:
                   status:
                     type: string
                     example: ok
+                  last_commit_message:
+                    type: string
+                    description: Last git commit message (if available).
   /get_version_map_full:
     get:
       summary: Get full version map
@@ -151,6 +170,15 @@ paths:
                         url:
                           type: string
                           format: uri
+                  execution_time:
+                    type: number
+                    description: Time taken in seconds.
+                  bot_limit_reached:
+                    type: boolean
+                    description: Present when rate limit was hit during extraction.
+                  request_bot_limit:
+                    type: integer
+                    description: Request count when limit was hit (present when bot_limit_reached is true).
         '400':
           description: No data or no url provided
           content:
@@ -162,6 +190,15 @@ paths:
                     type: string
         '404':
           description: No content found for URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '500':
+          description: Error fetching, converting, or extracting content
           content:
             application/json:
               schema:
