@@ -4,6 +4,7 @@ python-dotenv==1.2.1
 # Wiki scraping / API
 tqdm==4.67.3
 flask==3.1.3
+requests==2.32.5
 flask-cors==6.0.2
 beautifulsoup4==4.14.3
 
