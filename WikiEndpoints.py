@@ -2,6 +2,7 @@
 import os
 import re
 import json
+from tabnanny import check
 import time
 import requests
 import subprocess
@@ -47,6 +48,7 @@ URLs_TO_DROP = [
 
 URL_STRINGS_TO_DROP = [
     'Administrator',
+    'Admin',
     'logout',
     'login',
     'remove credentials',
@@ -60,6 +62,15 @@ URL_STRINGS_TO_DROP = [
     'ftp://',
     'ftps://',
     'download',
+    'editor',
+    'edit',
+    'google',
+    'wikipedia',
+    'mediawiki',
+    'foundation',
+    '_blank',
+    'confero.alkit',
+    'github.com',
     ';',
     '(',
     ')',
@@ -101,6 +112,30 @@ TITLES_TO_DROP = [
     ')',
 ]
 
+IMAGE_EXTENSIONS = [
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.bmp',
+    '.webp',
+]
+
+VIDEO_EXTENSIONS = [
+    '.mp4',
+    '.avi',
+    '.mov',
+    '.wmv',
+    '.flv',
+]
+
+AUDIO_EXTENSIONS = [
+    '.mp3',
+    '.wav',
+    '.ogg',
+    '.m4a',
+]
+
 WIKI_BASE_URL = "https://wiki.alkit.se/<VERSION_NUMBER>/index.php/Main_Page"
 RELEASE_HISTORIES = {
     'software': "https://wice-sysdoc.alkit.se/index.php/WICE_WCU_Software_Revision_History",    # Approach : Get listed version numbers and generate URLs
@@ -114,6 +149,22 @@ UNAVAILABLE_WICE_WIKI_VERSIONS = {}  # {'version_number': 'url'}
 COMPLETE_MAP = {}                     # {'version_number': [{'url': url, 'title': title}]}  --> List of Verified URLs for the given version number
 
 # Controller Functions
+def check_media_url(url:str):
+    """
+    Checks if the url is a media url.
+    Returns True if the url is a media url, False otherwise.
+    """
+    for image_extension in IMAGE_EXTENSIONS:
+        if image_extension in url:
+            return True
+    for video_extension in VIDEO_EXTENSIONS:
+        if video_extension in url:
+            return True
+    for audio_extension in AUDIO_EXTENSIONS:
+        if audio_extension in url:
+            return True
+    return False
+
 def remove_duplicates_from_list(list:list):
     for item in list:
         itemIndex = list.index(item)
@@ -142,31 +193,59 @@ def remove_duplicates_from_list_of_dicts(list:list):
     duplicate_titles += before_length-after_title_length
     return list
 
+def remove_blacklist_urls(list: list):
+    for item in list:
+        if isinstance(item, dict):
+            url = item['url']
+            for url_string in URL_STRINGS_TO_DROP:
+                if url_string in url.strip().lower():
+                    list.remove(item)
+            title = item['title']
+            for title_string in TITLES_TO_DROP:
+                if title_string in title.strip().lower():
+                    list.remove(item)
+        elif isinstance(item, str):
+            for url_string in URL_STRINGS_TO_DROP:
+                if url_string in item.strip().lower():
+                    list.remove(item)
+    return list
+
 def remove_irrelevant_areas(html_content:str, url:str):
     """
     Removes the irrelevant areas from the html content.
     Returns the html content with the irrelevant areas removed.
     """
+    is_base_url = False
     for _, wiki_url in WICE_WIKI_VERSIONS.items():
         if wiki_url.strip('/') in url.strip('/'):
             is_base_url = True
             break
     if is_base_url:
         return html_content
+    
+    if html_content.startswith('<?xml'):
+        return html_content
+    if '.xml' in url:
+        return html_content
+    if '<?xml' in html_content:
+        return html_content
+    if check_media_url(url):
+        return html_content
     soup = BeautifulSoup(html_content, "html.parser")
     mw_panel_div = soup.find("div", id="mw_panel")
     if mw_panel_div:
         mw_panel_div.decompose()
-        print('LOG: Dropped <div id="mw_panel">')
     mw_head_div = soup.find("div", id="mw_head")
     if mw_head_div:
         mw_head_div.decompose()
-        print('LOG: Dropped <div id="mw_head">')
+    # Remove the Contents/Index section from the html_content if present
+    contents_index_div = soup.find("div", id="toc")
+    if contents_index_div:
+        contents_index_div.decompose()
     # Remove the <footer> tag from the html_content if present
     footer_tag = soup.find("footer")
     if footer_tag:
-        footer_tag.decompose()  
-        print('LOG: Dropped <footer> tag')
+        footer_tag.decompose()
     return str(soup)
 
 def get_version_number_from_url(url:str):
@@ -341,13 +420,20 @@ def extract_hyperlinks_with_map(html_content, source_url:str, version_number:str
             links = remove_invalid_entries_from_list(links)
             new_links = remove_invalid_urls_from_list(new_links)
 
-    print(f"LOG: Newly Found Urls : {len(new_links)}")
-
     # Map all new HyperLinks
     for url in tqdm(new_links, desc='PROGRESS: Mapping new HyperLinks for version '+version_number):
         if url not in parsed_links:
             parsed_links.append(url)
             try:
+                if check_media_url(url):
+                    file_name = url.split('/')[-1]
+                    # If the file name is a media file, add it to the complete map
+                    if file_name not in COMPLETE_MAP[version_number]:
+                        COMPLETE_MAP[version_number].append({
+                            'url': url,
+                            'title': file_name
+                        })
+                    continue
                 parser = 'xml' if '.xml' in url else 'html.parser'
                 html_content_temp = remove_irrelevant_areas(fetch_html_from_url(url), url)                   # Fetch the html content of the sub page
                 content_stripped = html_content_temp.lstrip()
@@ -506,9 +592,10 @@ def map_quick_start_hyperlinks():
             url = item.get('url', '')
             if 'index.php/Quick_Start' in url:
                 quick_start_versions.append((version, url))
+                continue
 
     for version, quick_start_url in quick_start_versions:
-        print(f"LOG: Mapping Quick Start hyperlinks for version: {version}, url: {quick_start_url}")
+        print(f"\nLOG: Mapping Quick Start hyperlinks for version: {version}, url: {quick_start_url}")
         hyperlinks = extract_hyperlinks_with_map(fetch_html_from_url(quick_start_url), quick_start_url, version)
         # Avoid duplicating the initial entry for Quick Start (if already present)
         existing_urls = set(link['url'] for link in COMPLETE_MAP[version])
@@ -530,6 +617,10 @@ def init():
 
     # For each url in COMPLETE_MAP, if url has the sub-string 'index.php/Quick_Start', then map all hyperlinks within it
     map_quick_start_hyperlinks()
+
+    # Remove blacklist urls from the complete map
+    for key in COMPLETE_MAP.keys():
+        COMPLETE_MAP[key] = remove_blacklist_urls(COMPLETE_MAP[key])
         
     print('LOG: After Initial Mapping: ')
     for key in COMPLETE_MAP.keys():
@@ -623,7 +714,7 @@ def getUrlContent():
     execution_time = end_time - start_time
 
     if len(hyperlinks) == 0 and version_number.replace('.', '') in COMPLETE_MAP.keys():
-        hyperlinks = COMPLETE_MAP[version_number.replace('.', '')]
+        hyperlinks = remove_blacklist_urls(COMPLETE_MAP[version_number.replace('.', '')])
 
     print('\n\nLOG: Duplicates removed by URL: '+str(duplicate_urls))
     print('LOG: Duplicates removed by Titles: '+str(duplicate_titles))
