@@ -390,11 +390,13 @@ def save_json_to_file(content, file_path):
 # Function to entirely map a given version
 def _map_one_version(version: str):
     """Runs in a thread; maps a single version and writes to COMPLETE_MAP[version]."""
+    urls_found = 0
     session = requests.Session()
     session.headers.update(SCRAPER_HEADERS)
     unique_entries = []
     url = VALID_VERSION_HOME_PAGES[version]
     unique_entries = get_all_hyperlinks(url, version, session)
+    urls_found += len(unique_entries)
     unique_entries = remove_duplicates(unique_entries)
     unique_entries = remove_entries_by_url(unique_entries)
     unique_entries = remove_entries_by_title(unique_entries)
@@ -419,17 +421,20 @@ def _map_one_version(version: str):
     COMPLETE_MAP[version] = remove_entries_by_url(COMPLETE_MAP[version])
     COMPLETE_MAP[version] = remove_entries_by_title(COMPLETE_MAP[version])
     session.close()
-    return version
+    return version, urls_found
 
 # Main Function
 def main():
+    total_urls_found = 0
     valid_versions = get_available_version_numbers()
     start_time = time.time()
     print(f"LOG: Mapping {len(valid_versions)} versions: {valid_versions}")
     print(f"LOG: {len(valid_versions)} Threads will be started, one for each version.")
     # One thread per version (you have at most ~4 versions)
     with ThreadPoolExecutor(max_workers=len(valid_versions)) as executor:
-        list(executor.map(_map_one_version, valid_versions))
+        results = list(executor.map(_map_one_version, valid_versions))
+        for version, urls_found in results:
+            total_urls_found += urls_found
     end_time = time.time()
     execution_time = end_time - start_time
     minutes, seconds = divmod(execution_time, 60)
@@ -443,7 +448,8 @@ def main():
         COMPLETE_MAP[version] = remove_entries_by_title(COMPLETE_MAP[version])
         total_pages += len(COMPLETE_MAP[version])
         print(f"\t{version}: {len(COMPLETE_MAP[version])}")
-    print(f"Total Pages: {total_pages}")
+    print(f"Total Viable Pages Isolated: {total_pages}")
+    print(f"Total URLs Found: {total_urls_found}")
     save_json_to_file(COMPLETE_MAP, TARGET_FILE)
 
 # Main Call
