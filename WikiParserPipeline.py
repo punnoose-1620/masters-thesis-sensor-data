@@ -256,7 +256,7 @@ def get_html_content(url:str, session:requests.Session=None):
         fetchCount = 0
         return None
     fetchCount = fetchCount+1
-    response = session.get(url, timeout=1)
+    response = session.get(url, timeout=2)
     response.raise_for_status()
     # If Request Saturation Reached, wait 3 seconds, renew Session, and retry
     if "too many requests" in response.text.lower():
