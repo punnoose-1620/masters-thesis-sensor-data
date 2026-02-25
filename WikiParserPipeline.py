@@ -387,6 +387,15 @@ def save_json_to_file(content, file_path):
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(content, f, ensure_ascii=False, indent=4)
 
+# Function to get the latest version number
+def get_latest_version():
+    version_numbers = VALID_VERSION_HOME_PAGES.keys()
+    max_version = 0.0
+    for version in version_numbers:
+        if float(version) > float(max_version):
+            max_version = version
+    return max_version
+
 # Function to entirely map a given version
 def _map_one_version(version: str):
     """Runs in a thread; maps a single version and writes to COMPLETE_MAP[version]."""
@@ -428,13 +437,19 @@ def main():
     total_urls_found = 0
     valid_versions = get_available_version_numbers()
     start_time = time.time()
-    print(f"LOG: Mapping {len(valid_versions)} versions: {valid_versions}")
-    print(f"LOG: {len(valid_versions)} Threads will be started, one for each version.")
-    # One thread per version (you have at most ~4 versions)
-    with ThreadPoolExecutor(max_workers=len(valid_versions)) as executor:
-        results = list(executor.map(_map_one_version, valid_versions))
-        for version, urls_found in results:
-            total_urls_found += urls_found
+    latest_version = get_latest_version()
+
+    print(f"LOG: Mapping Latest Version: {latest_version}")
+    _map_one_version(latest_version)
+
+    # print(f"LOG: Mapping {len(valid_versions)} versions: {valid_versions}")
+    # print(f"LOG: {len(valid_versions)} Threads will be started, one for each version.")
+    # # One thread per version (you have at most ~4 versions)
+    # with ThreadPoolExecutor(max_workers=len(valid_versions)) as executor:
+    #     results = list(executor.map(_map_one_version, valid_versions))
+    #     for version, urls_found in results:
+    #         total_urls_found += urls_found
+    
     end_time = time.time()
     execution_time = end_time - start_time
     minutes, seconds = divmod(execution_time, 60)
@@ -450,6 +465,7 @@ def main():
         print(f"\t{version}: {len(COMPLETE_MAP[version])}")
     print(f"Total Viable Pages Isolated: {total_pages}")
     print(f"Total URLs Found: {total_urls_found}")
+    print(f"LOG: Latest Version: {latest_version}")
     save_json_to_file(COMPLETE_MAP, TARGET_FILE)
 
 # Main Call
