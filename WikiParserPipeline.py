@@ -425,6 +425,8 @@ def _map_one_version(version: str):
 def main():
     valid_versions = get_available_version_numbers()
     start_time = time.time()
+    print(f"LOG: Mapping {len(valid_versions)} versions: {valid_versions}")
+    print(f"LOG: {len(valid_versions)} Threads will be started, one for each version.")
     # One thread per version (you have at most ~4 versions)
     with ThreadPoolExecutor(max_workers=len(valid_versions)) as executor:
         list(executor.map(_map_one_version, valid_versions))
