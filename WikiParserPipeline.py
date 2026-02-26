@@ -215,7 +215,7 @@ def remove_navigation_bars(html_content:str):
 # Isolate body content from html content
 def isolate_body_content(html_content:str):
     soup = BeautifulSoup(html_content, 'html.parser')
-    body_tag = soup.find("div", id="bodyContent")
+    body_tag = soup.find("body")
     if body_tag:
         return str(body_tag)
     return html_content
@@ -404,8 +404,8 @@ def get_all_hyperlinks(ref_url:str, version:str, session:requests.Session=None):
         return unique_urls
     for version, url in VALID_VERSION_HOME_PAGES.items():
         if url.strip()!=ref_url.strip():
-            html_content = remove_navigation_bars(html_content)
             html_content = isolate_body_content(html_content)
+            html_content = remove_navigation_bars(html_content)
     text_content = html_to_text(html_content)
     parser = 'html.parser'
     if text_content.lstrip().startswith('<?xml') or ('<?xml' in text_content.lstrip()):
@@ -421,6 +421,8 @@ def get_all_hyperlinks(ref_url:str, version:str, session:requests.Session=None):
         if url in [item['url'].strip() for item in unique_urls]:
             continue
         if already_mapped(url):
+            continue
+        if ('wiki.alkit.se' not in url.strip()) and ('sysdoc.alkit.se' not in url.strip()):
             continue
         if not valid_flag:
             continue
@@ -520,9 +522,12 @@ def main():
         COMPLETE_MAP[version] = remove_entries_by_title(COMPLETE_MAP[version])
         total_pages += len(COMPLETE_MAP[version])
         print(f"\t{version}: {len(COMPLETE_MAP[version])}")
+    
     print(f"Total Viable Pages Isolated: {total_pages}")
     print(f"Total URLs Found: {total_urls_found}")
     print(f"LOG: Latest Version: {latest_version}")
+
+    print(f"LOG: COMPLETE_MAP: {json.dumps(COMPLETE_MAP[latest_version], indent=4)}")
     save_json_to_file(COMPLETE_MAP, TARGET_FILE)
 
 # Main Call

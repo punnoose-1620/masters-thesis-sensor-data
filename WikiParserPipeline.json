@@ -1,0 +1,56 @@
+{
+    "2.97": [
+        {
+            "url": "https://wice-sysdoc.alkit.se/index.php/M2M_release_notes",
+            "title": "M2M release notes"
+        },
+        {
+            "url": "https://wice-sysdoc.alkit.se/index.php/WMU_release_notes",
+            "title": "WMU release notes"
+        },
+        {
+            "url": "https://wice-sysdoc.alkit.se/index.php/MasterBox_release_notes",
+            "title": "MasterBox release notes"
+        },
+        {
+            "url": "https://wice-sysdoc.alkit.se/index.php/LPD_App_release_notes",
+            "title": "LPD App release notes"
+        },
+        {
+            "url": "https://wice.alkit.se/m2m/resource_AlarmService.html",
+            "title": "Added a set of end points for searching and listing alarms: https://wice.alkit.se/m2m/resource_AlarmService.html"
+        },
+        {
+            "url": "https://wice.alkit.se/m2m/json_SRECSignal.html",
+            "title": "Include module info in SRECSignal: https://wice.alkit.se/m2m/json_SRECSignal.html"
+        },
+        {
+            "url": "https://wice.alkit.se/m2m/resource_VehicleService.html#resource_VehicleService_setPlateBasedOnVIN_vin_plate_PUT",
+            "title": "New end point to set plate based on VIN ( https://wice.alkit.se/m2m/resource_VehicleService.html#resource_VehicleService_setPlateBasedOnVIN_vin_plate_PUT )"
+        }
+    ],
+    "2.96": [
+        {
+            "title": "Home Page",
+            "url": "https://wiki.alkit.se/wice296/index.php/Main_Page"
+        }
+    ],
+    "2.95": [
+        {
+            "title": "Home Page",
+            "url": "https://wiki.alkit.se/wice295/index.php/Main_Page"
+        }
+    ],
+    "2.94": [
+        {
+            "title": "Home Page",
+            "url": "https://wiki.alkit.se/wice294/index.php/Main_Page"
+        }
+    ],
+    "2.93": [
+        {
+            "title": "Home Page",
+            "url": "https://wiki.alkit.se/wice293/index.php/Main_Page"
+        }
+    ]
+}
