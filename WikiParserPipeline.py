@@ -1,11 +1,14 @@
 import re
 import json
 import time
+import warnings
 import requests
 from tqdm import tqdm
-from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from concurrent.futures import ThreadPoolExecutor
+from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
+
+warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
 
 # Session for wiki scraping: reuse connection and default headers
 scraperSession = requests.Session()
