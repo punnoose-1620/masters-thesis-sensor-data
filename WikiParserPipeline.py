@@ -62,7 +62,24 @@ URL_STRINGS_TO_DROP = [
     '_blank',
     'confero.alkit',
     'github.com',
-    'wireguard.com',
+    'wireguard',
+    'solarwinds',
+    'comparitech',
+    'vpm.'
+    'vanish',
+    'openelec',
+    'freak',
+    'project.org',
+    'torrent',
+    'opennicproject',
+    'threatpost',
+    'boum.org',
+    'spideroak',
+    'surfshark',
+    'azure.com',
+    'securelist',
+    'eicar',
+    'vembu',
     ';',
     '(',
     ')',
@@ -178,6 +195,31 @@ def resolve_relative_url(href:str, current:str, base_url:str=None):
         return urljoin(current, href)
     return urljoin(base_url, href)
 
+# Remove Navigation Bars from all non-home pages
+def remove_navigation_bars(html_content:str):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    mw_panel_div = soup.find("div", id="mw_panel")
+    if mw_panel_div:
+        mw_panel_div.decompose()
+    mw_head_div = soup.find("div", id="mw_head")
+    if mw_head_div:
+        mw_head_div.decompose()
+    contents_index_div = soup.find("div", id="toc")
+    if contents_index_div:
+        contents_index_div.decompose()
+    footer_tag = soup.find("footer")
+    if footer_tag:
+        footer_tag.decompose()
+    return str(soup)
+
+# Isolate body content from html content
+def isolate_body_content(html_content:str):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    body_tag = soup.find("div", id="bodyContent")
+    if body_tag:
+        return str(body_tag)
+    return html_content
+
 # Function to remove duplicates from list
 def remove_duplicates(list:list):
     unique_urls = []
@@ -259,17 +301,21 @@ def get_html_content(url:str, session:requests.Session=None):
         fetchCount = 0
         return None
     fetchCount = fetchCount+1
-    response = session.get(url, timeout=2)
-    response.raise_for_status()
-    # If Request Saturation Reached, wait 3 seconds, renew Session, and retry
-    if "too many requests" in response.text.lower():
-        print(f"ERROR: Request Saturated at Url [{url}]....\n\tWaiting for 3 seconds before retrying....\n")
-        time.sleep(3)
-        session.close()
-        session = requests.Session()
-        session.headers.update(SCRAPER_HEADERS)
-        return get_html_content(url, session)
-    return response.text
+    try:
+        response = session.get(url, timeout=2)
+        response.raise_for_status()
+        # If Request Saturation Reached, wait 3 seconds, renew Session, and retry
+        if "too many requests" in response.text.lower():
+            print(f"ERROR: Request Saturated at Url [{url}]....\n\tWaiting for 3 seconds before retrying....\n")
+            time.sleep(3)
+            session.close()
+            session = requests.Session()
+            session.headers.update(SCRAPER_HEADERS)
+            return get_html_content(url, session)
+        return response.text
+    except Exception as e:
+        print(f"\nERROR: Fetching HTML Content:{e} for URL: \n{url}")
+        return None
 
 # Function to convert html/xml content to text
 def xml_to_text(content):
@@ -302,6 +348,8 @@ def check_url_availability(url:str, session:requests.Session=None):
 def get_available_version_numbers(session:requests.Session=None):
     version_numbers = []
     release_history_html = get_html_content(RELEASE_HISTORIES, session)
+    if release_history_html is None:
+        return version_numbers
     soup = BeautifulSoup(release_history_html, 'html.parser')
     pre_cards = soup.find_all('pre')
     print(' ')
@@ -352,6 +400,12 @@ def get_all_hyperlinks(ref_url:str, version:str, session:requests.Session=None):
     fetchCount = 0
     unique_urls = []
     html_content = get_html_content(ref_url, session)
+    if html_content is None:
+        return unique_urls
+    for version, url in VALID_VERSION_HOME_PAGES.items():
+        if url.strip()!=ref_url.strip():
+            html_content = remove_navigation_bars(html_content)
+            html_content = isolate_body_content(html_content)
     text_content = html_to_text(html_content)
     parser = 'html.parser'
     if text_content.lstrip().startswith('<?xml') or ('<?xml' in text_content.lstrip()):
