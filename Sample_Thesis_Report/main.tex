@@ -1,0 +1,172 @@
+\documentclass[11pt, a4paper]{resources/JTH}
+
+\graphicspath{ {./resources/} }
+\addbibresource{example.bib}
+
+\title{AI-Assisted Data Extraction and Decision Support for Industrial Warranty Claim Management}
+\shorttitle{} % Should be max 50 characters
+\subtitle{} 
+\author{Ameena Thanzoor, Jobsy Johnson}
+\subject{ Artificial Intelligence}
+\programme{Three-year Bachelor of Science in Engineering}
+\supervisor{Johannes Oetsch}
+\examiner{Vladimir Tarasov}
+\credits{7,5}
+
+\begin{document}
+
+\maketitle
+
+
+\pagenumbering{arabic}
+
+\section*{Abstract}
+
+
+
+\textbf{Keywords:} Deep Learning, Product Identification, Warranty Claim Management.
+\newpage
+\begingroup
+    \setlength{\parskip}{0pt} % Restore \parskip within this scope
+    \tableofcontents
+\endgroup
+
+\newpage
+
+\pagenumbering{arabic}
+
+\section{Introduction}\label{sec:intro}
+
+% motivation (princess): what is the background and the motivation of this work? (many companies are facing the follwoing problem ... they need to classify product ... autamted means to do so would safe lots of workt time and would be therefore highly desribable)
+
+% challenges (dragon): what are the challenges: why is it not easy to do that?
+
+% related work (other knight that failed): what are the closest approchaes in the literature to your probelm, and why can't you use them direcrtly?
+
+% your plan: what are you actually doing to solve the problem?
+
+% the outcome (the happy end): what have you achieved?
+
+
+
+\subsection{Problem Statement}
+ELAJO's warranty claim process is entirely manual, and this creates real operational problems. There are five main issues:
+
+1. Manual Product Identification: Technicians have to look at a product and figure out what it is from a catalog of 1.2 million items. A lot of electrical components are nearly identical - the same size, similar colors, almost the same design. When products come in damaged or the labels are worn off, misidentification becomes a serious risk.
+
+2. Time-Intensive Process: A single warranty claim needs aprroximately 30 minutes from start to finish. That includes identifying the product, finding its specifications, and checking whether it meets the ALEM09 warranty criteria.
+
+3. Inconsistent Decision-Making: Different technicians sometimes interpret the ALEM09 rules differently, which means similar claims can get different outcomes. What one technician approves, another might reject. This creates customer service headaches and financial risks when claims get approved incorrectly.
+
+4. Scalability Constraints: The company's product range keeps growing, and so does the number of claims. The current approach would require hiring more technicians continuously just to keep pace. That's not sustainable financially.
+
+5. Limited Traceability: Everything's recorded manually, which makes it almost impossible to spot trends. Which products fail most often? Which manufacturers have consistent quality issues? These questions are hard to answer without structured data.
+
+These challenges necessitate an automated, AI-powered solution that can accurately identify products from uploaded images, retrieve associated metadata, apply warranty rules consistently, and provide decision support to technicians while maintaining a comprehensive audit trail for continuous improvement.
+\subsection{Research Questions}
+In particular, we are addressing the following research questions:
+
+\begin{itemize}
+    \item[RQ1:] How can deep learning–based data extraction methods be applied to retrieve relevant product information from images and documents in industrial warranty claim cases where barcodes or serial numbers are missing or unreadable?
+    
+    \item[RQ2:] Which deep learning architectures achieve optimal performance for industrial product identification, and how do different architectures compare in terms of accuracy, efficiency, and robustness?
+    \item [RQ3:]What data augmentation strategies most effectively bridge the domain gap between studio-quality catalog images and real-world technician photographs, enabling accurate recognition despite visual distribution shift?
+\end{itemize}
+
+
+\subsection{Purpose}
+\subsection{Objective}
+\subsection{Contribution}
+\subsection{Thesis Structure}
+
+   \parencite{belletoile2019large, kiapour2015wheretobuy}
+
+
+We conclude the thesis in Section~\ref{sec:conl} with a summary and pointers to futrure work.   
+
+
+\section{Related Work}\label{sec:rel}
+
+% how does your work related to similar approahces that attempt to solve your problem or that could be used tro do so?
+% what are the limitations of these approaches and does your work overcome them
+
+
+
+\section{Background}\label{sec:backgr}
+   
+% what is the role of the company; desacribe also details about the problem they want to solve
+% provide the neccessary technical background needed to understand the methods you use in your thesis.
+% explain specific termninology, introduce relevant concepts, and provide pointers to the literature for further information.
+
+        
+
+\section{Method and implementation}
+    
+% What is the approach your are using to solve the problem?
+% How does it work on 
+    % (i) a high level, (overview figure),
+    % (ii) at a technically detailed level
+% don't forget to cite the literature when approapriate
+% where is your implementation and data available (github)
+
+
+
+    %\subsection{Questions}
+    
+
+    %\subsection{Process}
+    
+        
+
+    %\subsection{Data Collection}
+    
+       
+        
+
+    %\subsection{Analysis}
+    
+
+
+\section{Evaluation and Results}
+
+% you start by describing the purpose of the evaluation
+    % why are you doing experients, what are the specific questions you want to answer with your experiments
+% what is the experimental setup (what hardware/software are you using)
+% what is the experiemntal design (datasets, hold-out sets, cross validiation)
+% What are the results of the experiemnt (both figures/tables and textual description of these figures and tables that summarise and explain them).
+   
+\section{Discussion}
+\label{sec:dis}
+
+% you discuss the broader meaning of your findings in relation to the problem you want to solve
+% you provide answers for all your research quations that you have posed in the introdution.
+
+
+\section{Conclusion}\label{sec:conl}   
+
+% short summary of what you have done
+% what are the main leassons learned 
+% why is this relevant not only for the company but also beyond
+% what are the limitations of your work
+
+% future work: what would be the next steps to advance this work further?
+
+
+
+\newpage
+\printbibliography
+
+\newpage
+\begin{appendices}
+
+\section{Gathered Data}
+
+  
+    
+\section{Info about company}
+
+    
+
+\end{appendices}
+
+\end{document}
