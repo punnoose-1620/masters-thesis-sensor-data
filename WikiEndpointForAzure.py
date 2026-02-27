@@ -4,12 +4,22 @@ import json
 import time
 import warnings
 import requests
+import subprocess
 from tqdm import tqdm
+from flask_cors import CORS
+from dotenv import load_dotenv
 from urllib.parse import urljoin
+from flask import Flask, jsonify, request
 from concurrent.futures import ThreadPoolExecutor
 from bs4 import BeautifulSoup, XMLParsedAsHTMLWarning
 
+# Ignore XML Parsed as HTML Warning
 warnings.filterwarnings("ignore", category=XMLParsedAsHTMLWarning)
+
+# Flask App
+app = Flask(__name__)
+app.config['PROJECT_NAME'] = os.getenv('PROJECT_NAME')
+CORS(app)
 
 # Session for wiki scraping: reuse connection and default headers
 scraperSession = requests.Session()
@@ -28,6 +38,8 @@ fetchCount = 0
 
 RELEASE_HISTORIES = 'https://wice-sysdoc.alkit.se/index.php/WICE_WCU_Software_Revision_History'
 WIKI_BASE_URL = "https://wiki.alkit.se/<VERSION_NUMBER>/index.php/Main_Page"
+
+URLs_TO_INCLUDE = ['wiki.alkit.se', 'sysdoc.alkit.se', 'alkit.se/wice', 'wice.alkit.se']
 
 URLs_TO_DROP = [
     'https://developer.wikimedia.org/',
@@ -149,14 +161,13 @@ AUDIO_EXTENSIONS = [
 # version: home_url
 VALID_VERSION_HOME_PAGES = {}
 
-UnwantedUrls = {}
-
 # version: [{url, title}]
 COMPLETE_MAP = {}
 
 # Function to double check and avoid invalid url patterns
 def avoid_url_check(url:str):
-    if url.strip() == '':
+    url = url.strip()
+    if url == '':
         return True
     for pattern in URL_STRINGS_TO_DROP:
         if pattern in url:
@@ -173,6 +184,9 @@ def avoid_url_check(url:str):
     for pattern in AUDIO_EXTENSIONS:
         if url.endswith(pattern):
             return True
+    for url_to_include in URLs_TO_INCLUDE:
+        if url_to_include in url:
+            return False
     return False
 
 # Function to check if URL is already mapped in any version
@@ -184,6 +198,18 @@ def already_mapped(url:str):
             if url.strip()==url_ref.strip():
                 return True
     return False
+
+def add_to_map(url:str, title:str, version:str):
+    if version not in COMPLETE_MAP.keys():
+        COMPLETE_MAP[version] = [{
+            'title': title,
+            'url': url
+        }]
+    else:
+        COMPLETE_MAP[version].append({
+            'title': title,
+            'url': url
+        })
 
 # Resolve Relative Urls and ignore fragment-only / empty links
 def resolve_relative_url(href:str, current:str, base_url:str=None):
@@ -380,9 +406,10 @@ def get_available_version_numbers(session:requests.Session=None):
             VALID_VERSION_HOME_PAGES[version]= version_home
         else:
             version_numbers.remove(version)
+    print(f"LOG: Available versions : {version_numbers}")
     return version_numbers
 
-# Function to get context of an anchor tag
+# Function to get context(related text/title) of an anchor tag
 def get_context(anchor:BeautifulSoup):
     anchor_text = anchor.get_text(strip=True)
     parent_text = ''
@@ -398,78 +425,7 @@ def get_context(anchor:BeautifulSoup):
             context = parent_text[start:end]
     return context.strip()
 
-# Function to get all immediate hyperlinks in html content. Reset fetchCount for every URL
-def get_all_hyperlinks(ref_url:str, version:str, session:requests.Session=None):
-    # if ref_url.endswith('/Quick_Start'):
-    #     print('\nLOG: Getting all hyperlinks for Quick Start url: ', ref_url)
-    global fetchCount
-    fetchCount = 0
-    unique_urls = []
-    html_content = get_html_content(ref_url, session)
-    if html_content is None:
-        return unique_urls
-    for version, url in VALID_VERSION_HOME_PAGES.items():
-        if url.strip()!=ref_url.strip():
-            html_content = isolate_body_content(html_content)
-            html_content = remove_navigation_bars(html_content)
-    text_content = html_to_text(html_content)
-    parser = 'html.parser'
-    if text_content.lstrip().startswith('<?xml') or ('<?xml' in text_content.lstrip()):
-        parser = 'xml'
-    soup = BeautifulSoup(html_content, parser)
-    for anchor in soup.find_all('a', href=True):
-        context = get_context(anchor)
-        url = resolve_relative_url(anchor['href'], ref_url, VALID_VERSION_HOME_PAGES[version])
-        # Check if URL is valid and new
-        if (url is None) or (url.strip() == ''):
-            continue
-        if url in [item['url'].strip() for item in unique_urls]:
-            continue
-        if already_mapped(url):
-            continue
-        if ('wiki.alkit.se' not in url.strip()) and ('sysdoc.alkit.se' not in url.strip()) and ('alkit.se/wice' not in url.strip()) and ('wice.alkit.se' not in url.strip()):
-            global UnwantedUrls
-            url = url.strip().split('#')[0]
-            if url not in UnwantedUrls.keys():
-                UnwantedUrls[url] = 0
-            UnwantedUrls[url] += 1
-            continue
-        # If URL is valid and new, add it to unique_urls
-        if check_url_availability(url, session):
-            unique_urls.append({
-                'url': url,
-                'title': context
-            })
-    return unique_urls
-
-# Function to save map to json file
-def save_json_to_file(content, file_path):
-    # 'a+' = read/write, create if not exists, no truncation
-    with open(file_path, 'a+', encoding='utf-8') as f:
-        f.seek(0)  # go to start to read
-        try:
-            existing = json.load(f)
-        except json.JSONDecodeError:
-            existing = {}
-        except Exception:
-            existing = {}
-
-        # merge existing -> content (same logic as now)
-        for version_key, entries in existing.items():
-            if version_key not in content:
-                content[version_key] = entries
-            else:
-                content[version_key].extend(entries)
-                content[version_key] = remove_duplicates(content[version_key])
-                content[version_key] = remove_entries_by_url(content[version_key])
-                content[version_key] = remove_entries_by_title(content[version_key])
-
-        # overwrite file with merged content
-        f.seek(0)
-        f.truncate()
-        json.dump(content, f, ensure_ascii=False, indent=4)
-
-# Function to get the latest version number
+# Function to get the latest valid version number
 def get_latest_version():
     version_numbers = VALID_VERSION_HOME_PAGES.keys()
     max_version = 0.0
@@ -478,82 +434,157 @@ def get_latest_version():
             max_version = version
     return max_version
 
-# Function to entirely map a given version
-def _map_one_version(version: str):
-    """Runs in a thread; maps a single version and writes to COMPLETE_MAP[version]."""
-    urls_found = 0
-    session = requests.Session()
-    session.headers.update(SCRAPER_HEADERS)
-    unique_entries = []
-    url = VALID_VERSION_HOME_PAGES[version]
-    unique_entries = get_all_hyperlinks(url, version, session)
-    urls_found += len(unique_entries)
-    unique_entries = remove_duplicates(unique_entries)
-    unique_entries = remove_entries_by_url(unique_entries)
-    unique_entries = remove_entries_by_title(unique_entries)
-    COMPLETE_MAP[version] = unique_entries
-    last_entry = unique_entries[-1]
-    pbar = tqdm(
-        unique_entries, 
-        desc=f'PROGRESS: Mapping subpages for {version}.... ', 
-        unit=' urls'
-        )
-    for entry in pbar:
-        if entry==last_entry:
-            pbar.set_description(f'PROGRESS: Mapping Quick Start flow for {version}.... ')
-        url = entry['url']
-        new_entries = get_all_hyperlinks(url, version, session)
-        print(f"\nUnwanted Urls in {version} : \n{json.dumps(UnwantedUrls, indent=4)}\n")
-        new_entries = remove_duplicates(new_entries)
-        new_entries = remove_entries_by_url(new_entries)
-        new_entries = remove_entries_by_title(new_entries)
-        unique_entries.extend(new_entries)
-        save_json_to_file({version:unique_entries}, TARGET_FILE)
-    COMPLETE_MAP[version].extend(unique_entries)
-    COMPLETE_MAP[version] = remove_duplicates(COMPLETE_MAP[version])
-    COMPLETE_MAP[version] = remove_entries_by_url(COMPLETE_MAP[version])
-    COMPLETE_MAP[version] = remove_entries_by_title(COMPLETE_MAP[version])
-    session.close()
-    return version, urls_found
+# Function to map immediate hyperlinks from html content
+def extract_immediate_hyperlinks(html_content:str, url:str, version:str):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    hyperlinks = []
+    for anchor in soup.find_all('a', href=True):
+        text = anchor.get_text(strip=True)
+        url = resolve_relative_url(anchor['href'], url, url).strip()
+        includeFlag = False
+        for url_to_include in URLs_TO_INCLUDE:
+            if url_to_include in url:
+                includeFlag = True
+        if not includeFlag:
+            continue
+        if (url is None) or (url.strip() == ''):
+            continue
+        if avoid_url_check(url):
+            continue
+        if already_mapped(url):
+            hyperlinks.append({
+                'title': text,
+                'url': url
+            })
+            continue
+        if check_url_availability(url):
+            hyperlinks.append({
+                'title': text,
+                'url': url
+            })
+            add_to_map(url, text, version)
+    return hyperlinks
 
-# Main Function
-def main():
-    total_urls_found = 0
-    valid_versions = get_available_version_numbers()
+def init():
     start_time = time.time()
+    valid_versions = get_available_version_numbers()
     latest_version = get_latest_version()
 
-    print(f"LOG: Mapping Latest Version: {latest_version}")
-    _map_one_version(latest_version)
-
-    # print(f"LOG: Mapping {len(valid_versions)} versions: {valid_versions}")
-    # print(f"LOG: {len(valid_versions)} Threads will be started, one for each version.")
-    # # One thread per version (you have at most ~4 versions)
-    # with ThreadPoolExecutor(max_workers=len(valid_versions)) as executor:
-    #     results = list(executor.map(_map_one_version, valid_versions))
-    #     for version, urls_found in results:
-    #         total_urls_found += urls_found
-    
     end_time = time.time()
     execution_time = end_time - start_time
     minutes, seconds = divmod(execution_time, 60)
     print(f"LOG: Total Mapping Execution Time: {int(minutes)}m {seconds:.2f}s")
+    return latest_version
 
-    total_pages = 0
-    print(f"Map Statistics:")
-    for version in COMPLETE_MAP.keys():
-        COMPLETE_MAP[version] = remove_duplicates(COMPLETE_MAP[version])
-        COMPLETE_MAP[version] = remove_entries_by_url(COMPLETE_MAP[version])
-        COMPLETE_MAP[version] = remove_entries_by_title(COMPLETE_MAP[version])
-        total_pages += len(COMPLETE_MAP[version])
-        print(f"\t{version}: {len(COMPLETE_MAP[version])}")
+# Endpoints
+@app.route('/')
+def index():
+    """
+    Index Page for the API
+    Returns:
+        message: str
+        current_commit: str
+    """
+    last_commit_message = "Unable to retrieve commit message"
+    try:
+        latest_version = init()
+        result = subprocess.run(['git', 'log', '-1', '--pretty=%B'], capture_output=True, text=True)
+        last_commit_message = result.stdout.strip()
+    except Exception as e:
+        last_commit_message = f"Unable to retrieve commit message: {e}"
+    if 'Unable to retrieve commit message' in last_commit_message:
+        return jsonify({
+            'message': 'Welcome to the WICE Wiki API. This API is used to resolve version numbers, urls and get contents from the WICE Wiki Pages.'
+            }), 200
+    return jsonify({
+        'message': 'Welcome to the WICE Wiki API. This API is used to resolve version numbers, urls and get contents from the WICE Wiki Pages.',
+        'current_commit': last_commit_message,
+        'latest_version': latest_version
+        }), 200
+
+@app.route('/get_version_map_full')
+def getVersionMapFull():
+    """
+    Get the full version map
+    Returns:
+        version_maps: dict
+            version_number: str
+            url: str
+    """
+    version_maps = VALID_VERSION_HOME_PAGES
+    if version_maps:
+        return jsonify(version_maps), 200
+    else:
+        return jsonify({'error': 'No version maps found'}), 404
+
+@app.route('/get_url_content', methods=['POST'])
+def getUrlContent():
+    """
+    Get the content of the given url and return the content and hyperlinks from the page
+    Parameters:
+        url: str
+        version_number: str
+    Returns:
+        success: bool
+        error: str
+        content: str
+        hyperlinks: list
+        execution_time: float (in seconds)
+    """
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    url = data.get('url', '')
+    if not url:
+        return jsonify({'error': 'No url provided'}), 400
+    version_number = data.get('version_number', '')
+    if not version_number:
+        return jsonify({'error': 'No version number provided'}), 400
+
+    start_time = time.time()
+    session = requests.Session()
+    session.headers.update(SCRAPER_HEADERS)
+
+    returnValue = {
+        'success': True
+    }
+    try:
+        html_content = get_html_content(url)
+        if url not in VALID_VERSION_HOME_PAGES.values():
+            html_content = isolate_body_content(html_content)
+            html_content = remove_navigation_bars(html_content, url)
+    except Exception as e:
+        returnValue['success'] = False
+        returnValue['error'] = 'Error fetching html content: '+str(e)
+        return jsonify(returnValue), 500
+
+    try:
+        text_content = html_to_text(html_content)
+        returnValue['content'] = text_content
+    except Exception as e:
+        returnValue['success'] = False
+        returnValue['error'] = 'Error fetching html content: '+str(e)
+        return jsonify(returnValue), 500
     
-    print(f"Total Viable Pages Isolated: {total_pages}")
-    print(f"Total URLs Found: {total_urls_found}")
-    print(f"LOG: Latest Version: {latest_version}")
+    try:
+        hyperlinks = extract_immediate_hyperlinks(html_content, url, version_number)
+        hyperlinks = remove_entries_by_url(hyperlinks)
+        hyperlinks = remove_entries_by_title(hyperlinks)
+        hyperlinks = remove_duplicates(hyperlinks)
+        returnValue['hyperlinks'] = hyperlinks
+    except Exception as e:
+        returnValue['success'] = False
+        returnValue['error'] = 'Error fetching html content: '+str(e)
+        return jsonify(returnValue), 500
+    
+    end_time = time.time()
+    execution_time = end_time - start_time
+    returnValue['execution_time'] = execution_time
+    return jsonify(returnValue), 200
 
-    print(f"LOG: COMPLETE_MAP: {json.dumps(COMPLETE_MAP[latest_version], indent=4)}")
-    save_json_to_file(COMPLETE_MAP, TARGET_FILE)
-
-# Main Call
-main()
+if __name__ == '__main__':
+    load_dotenv()
+    debug = os.getenv('DEBUG', False)
+    port = os.getenv('PORT', 5000)
+    host = os.getenv('HOST', '0.0.0.0')
+    app.run(debug=debug, port=port, host=host)
