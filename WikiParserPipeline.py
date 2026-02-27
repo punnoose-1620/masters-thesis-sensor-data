@@ -1,3 +1,4 @@
+import os
 import re
 import json
 import time
@@ -148,6 +149,8 @@ AUDIO_EXTENSIONS = [
 # version: home_url
 VALID_VERSION_HOME_PAGES = {}
 
+UnwantedUrls = {}
+
 # version: [{url, title}]
 COMPLETE_MAP = {}
 
@@ -205,6 +208,9 @@ def remove_navigation_bars(html_content:str):
     if mw_head_div:
         mw_head_div.decompose()
     contents_index_div = soup.find("div", id="toc")
+    if contents_index_div:
+        contents_index_div.decompose()
+    contents_index_div = soup.find("div", role="toc")
     if contents_index_div:
         contents_index_div.decompose()
     footer_tag = soup.find("footer")
@@ -414,17 +420,19 @@ def get_all_hyperlinks(ref_url:str, version:str, session:requests.Session=None):
     for anchor in soup.find_all('a', href=True):
         context = get_context(anchor)
         url = resolve_relative_url(anchor['href'], ref_url, VALID_VERSION_HOME_PAGES[version])
-        valid_flag = False
         # Check if URL is valid and new
-        if (url is not None) and (url.strip() != ''):
-            valid_flag = True
+        if (url is None) or (url.strip() == ''):
+            continue
         if url in [item['url'].strip() for item in unique_urls]:
             continue
         if already_mapped(url):
             continue
-        if ('wiki.alkit.se' not in url.strip()) and ('sysdoc.alkit.se' not in url.strip()):
-            continue
-        if not valid_flag:
+        if ('wiki.alkit.se' not in url.strip()) and ('sysdoc.alkit.se' not in url.strip()) and ('alkit.se/wice' not in url.strip()) and ('wice.alkit.se' not in url.strip()):
+            global UnwantedUrls
+            url = url.strip().split('#')[0]
+            if url not in UnwantedUrls.keys():
+                UnwantedUrls[url] = 0
+            UnwantedUrls[url] += 1
             continue
         # If URL is valid and new, add it to unique_urls
         if check_url_availability(url, session):
@@ -436,14 +444,29 @@ def get_all_hyperlinks(ref_url:str, version:str, session:requests.Session=None):
 
 # Function to save map to json file
 def save_json_to_file(content, file_path):
-    """
-    Saves the given content to a JSON file.
+    # 'a+' = read/write, create if not exists, no truncation
+    with open(file_path, 'a+', encoding='utf-8') as f:
+        f.seek(0)  # go to start to read
+        try:
+            existing = json.load(f)
+        except json.JSONDecodeError:
+            existing = {}
+        except Exception:
+            existing = {}
 
-    Args:
-        content (dict or list): The JSON-serializable content to write.
-        file_path (str): Destination path for the JSON file.
-    """
-    with open(file_path, 'w', encoding='utf-8') as f:
+        # merge existing -> content (same logic as now)
+        for version_key, entries in existing.items():
+            if version_key not in content:
+                content[version_key] = entries
+            else:
+                content[version_key].extend(entries)
+                content[version_key] = remove_duplicates(content[version_key])
+                content[version_key] = remove_entries_by_url(content[version_key])
+                content[version_key] = remove_entries_by_title(content[version_key])
+
+        # overwrite file with merged content
+        f.seek(0)
+        f.truncate()
         json.dump(content, f, ensure_ascii=False, indent=4)
 
 # Function to get the latest version number
@@ -480,10 +503,12 @@ def _map_one_version(version: str):
             pbar.set_description(f'PROGRESS: Mapping Quick Start flow for {version}.... ')
         url = entry['url']
         new_entries = get_all_hyperlinks(url, version, session)
+        print(f"\nUnwanted Urls in {version} : \n{json.dumps(UnwantedUrls, indent=4)}\n")
         new_entries = remove_duplicates(new_entries)
         new_entries = remove_entries_by_url(new_entries)
         new_entries = remove_entries_by_title(new_entries)
         unique_entries.extend(new_entries)
+        save_json_to_file({version:unique_entries}, TARGET_FILE)
     COMPLETE_MAP[version].extend(unique_entries)
     COMPLETE_MAP[version] = remove_duplicates(COMPLETE_MAP[version])
     COMPLETE_MAP[version] = remove_entries_by_url(COMPLETE_MAP[version])
